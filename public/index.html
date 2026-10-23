@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LifePilot AI — Your Personal AI Assistant (Alexa+ & AWS Bedrock)</title>
+  <meta name="description" content="LifePilot AI is an intelligent personal productivity assistant combining a simulated Alexa+ conversational experience with Amazon Bedrock AI planning and task management.">
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%2300c8ff'/><polygon points='40,30 70,50 40,70' fill='%230a1128'/></svg>">
+</head>
+<body class="theme-alexa-dark">
+  <!-- Top Navigation & Status Bar -->
+  <header class="app-header">
+    <div class="header-brand">
+      <div class="alexa-glow-mini" id="miniGlowRing" title="Alexa+ Ambient State"></div>
+      <div class="brand-text">
+        <h1 class="brand-title">LifePilot <span class="brand-badge">AI</span></h1>
+        <p class="brand-subtitle">Simulated Alexa+ Assistant &bull; AWS Builder</p>
+      </div>
+    </div>
+
+    <!-- Center Quick Stats -->
+    <div class="header-stats" id="headerStats">
+      <div class="stat-pill" title="Pending tasks">
+        <span class="stat-icon">📋</span>
+        <span class="stat-count" id="pendingCount">0</span>
+        <span class="stat-label">Pending</span>
+      </div>
+      <div class="stat-pill" title="Completed tasks">
+        <span class="stat-icon">✅</span>
+        <span class="stat-count" id="completedCount">0</span>
+        <span class="stat-label">Done</span>
+      </div>
+      <div class="stat-pill" title="Completion percentage">
+        <span class="stat-icon">📈</span>
+        <span class="stat-count" id="completionRate">0%</span>
+      </div>
+    </div>
+
+    <!-- Header Actions -->
+    <div class="header-actions">
+      <!-- AWS Bedrock Status Badge -->
+      <button class="status-badge-btn" id="bedrockStatusBtn" title="View AWS Bedrock Connection Status">
+        <span class="status-dot status-loading" id="statusDot"></span>
+        <span class="status-text" id="statusText">Checking AI Engine...</span>
+      </button>
+
+      <!-- Voice TTS Toggle -->
+      <button class="icon-btn" id="ttsToggleBtn" title="Toggle Voice Responses (Read Aloud)">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+          <path id="ttsSoundWave" d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+        </svg>
+      </button>
+
+      <!-- Theme Switcher -->
+      <button class="icon-btn" id="themeToggleBtn" title="Toggle Light/Dark Theme">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="5"></circle>
+          <line x1="12" y1="1" x2="12" y2="3"></line>
+          <line x1="12" y1="21" x2="12" y2="23"></line>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+          <line x1="1" y1="12" x2="3" y2="12"></line>
+          <line x1="21" y1="12" x2="23" y2="12"></line>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+      </button>
+
+      <!-- Settings / Bedrock Diagnostics Modal Trigger -->
+      <button class="icon-btn" id="settingsBtn" title="AWS Bedrock & Assistant Settings">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Mobile View Navigation Tabs -->
+  <div class="mobile-tabs" id="mobileTabs">
+    <button class="mobile-tab-btn active" data-tab="assistantPanel">
+      <span>💬 Assistant</span>
+    </button>
+    <button class="mobile-tab-btn" data-tab="planPanel">
+      <span>📅 Daily & Study Plan</span>
+    </button>
+    <button class="mobile-tab-btn" data-tab="taskPanel">
+      <span>📋 Tasks (<span id="mobilePendingBadge">0</span>)</span>
+    </button>
+  </div>
+
+  <!-- Main App Layout: Two Primary Panels -->
+  <main class="app-main">
+    
+    <!-- LEFT PANEL: Alexa+ Conversational Assistant Experience -->
+    <section class="panel assistant-panel active" id="assistantPanel">
+      <!-- Alexa+ Ambient Visual Center -->
+      <div class="alexa-visual-hero">
+        <div class="alexa-ring-container">
+          <div class="alexa-ring" id="alexaRing"></div>
+          <div class="alexa-core">
+            <span class="alexa-icon">✦</span>
+          </div>
+        </div>
+        <div class="alexa-status-caption" id="alexaStatusCaption">
+          Alexa+ is ready. How can I help you plan your day?
+        </div>
+      </div>
+
+      <!-- Suggested Prompts / Quick Action Chips -->
+      <div class="prompt-chips-container">
+        <div class="chips-label">Suggested Requests:</div>
+        <div class="chips-scroll">
+          <button class="prompt-chip" data-prompt="I have five days to prepare for my Java exam. Help me create a revision plan.">
+            📚 5-Day Java Exam Plan
+          </button>
+          <button class="prompt-chip" data-prompt="Help me plan my day.">
+            ☀️ Plan My Day
+          </button>
+          <button class="prompt-chip" data-prompt="What should I prioritize today?">
+            🎯 Prioritize My Tasks
+          </button>
+          <button class="prompt-chip" data-prompt="Add a task to complete my project by tomorrow.">
+            ➕ Add Tomorrow's Project Task
+          </button>
+          <button class="prompt-chip" data-prompt="Summarize my pending tasks.">
+            📊 Summarize Tasks
+          </button>
+        </div>
+      </div>
+
+      <!-- Chat History -->
+      <div class="chat-history" id="chatHistory" aria-live="polite">
+        <!-- Messages will be rendered here dynamically -->
+      </div>
+
+      <!-- Chat Input Area with Text, Voice STT, and Send -->
+      <div class="chat-input-container">
+        <!-- Live Voice Speech-to-Text Banner (active when listening) -->
+        <div class="speech-banner hidden" id="speechBanner">
+          <span class="speech-pulse"></span>
+          <span class="speech-text" id="speechText">Listening to your voice... Speak now</span>
+          <button class="speech-cancel-btn" id="cancelSpeechBtn">&times;</button>
+        </div>
+
+        <form class="chat-input-form" id="chatForm">
+          <!-- Voice Input Button (Web Speech API) -->
+          <button type="button" class="voice-btn" id="voiceBtn" title="Speak to LifePilot AI (Voice Input)">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+              <line x1="12" y1="19" x2="12" y2="23"></line>
+              <line x1="8" y1="23" x2="16" y2="23"></line>
+            </svg>
+          </button>
+
+          <!-- Text Input -->
+          <input
+            type="text"
+            id="chatInput"
+            class="chat-input"
+            placeholder="Ask Alexa+ (e.g., 'I have a Java exam in 5 days', 'Plan my day')..."
+            autocomplete="off"
+            required
+          />
+
+          <!-- Send Button -->
+          <button type="submit" class="send-btn" id="sendBtn" title="Send request">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- RIGHT PANEL: Productivity Hub (Plans, Tasks, & Prioritization) -->
+    <section class="panel productivity-panel" id="productivityPanel">
+      
+      <!-- Panel Navigation Tabs -->
+      <div class="hub-nav-tabs">
+        <button class="hub-tab active" data-target="planTab">
+          <span class="tab-icon">📅</span> Daily & Study Plans
+        </button>
+        <button class="hub-tab" data-target="tasksTab">
+          <span class="tab-icon">📋</span> Task Board (<span id="taskBoardBadge">0</span>)
+        </button>
+        <button class="hub-tab" data-target="prioritiesTab">
+          <span class="tab-icon">🎯</span> Eisenhower Matrix
+        </button>
+      </div>
+
+      <!-- TAB 1: Daily & Study Plan Generator -->
+      <div class="hub-tab-content active" id="planTab">
+        <div class="plan-header-card">
+          <div class="plan-header-info">
+            <h2 class="plan-title" id="currentPlanTitle">Active Schedule</h2>
+            <p class="plan-summary" id="currentPlanSummary">Ask the assistant to generate a study roadmap or daily itinerary.</p>
+          </div>
+          <div class="plan-header-actions">
+            <button class="btn btn-secondary btn-sm" id="generateQuickPlanBtn" title="Generate fresh plan">
+              ⚡ New Plan
+            </button>
+            <button class="btn btn-primary btn-sm" id="addAllPlanTasksBtn" style="display: none;" title="Add all milestones to task board">
+              ➕ Add All to Tasks
+            </button>
+          </div>
+        </div>
+
+        <!-- Plan Day Tabs (if multi-day plan e.g. 5 days for Java) -->
+        <div class="day-tabs-bar" id="dayTabsBar" style="display: none;">
+          <!-- Dynamically populated day tabs: Day 1, Day 2, etc. -->
+        </div>
+
+        <!-- Plan Timeline Items List -->
+        <div class="plan-timeline" id="planTimeline">
+          <!-- Default Welcome Plan Card -->
+          <div class="empty-state">
+            <div class="empty-icon">🗓️</div>
+            <h3>No Active Plan Loaded</h3>
+            <p>LifePilot AI can generate optimized daily itineraries or comprehensive multi-day exam study schedules.</p>
+            <div class="empty-actions">
+              <button class="btn btn-accent" id="emptyJavaBtn">Try: 5-Day Java Exam Plan</button>
+              <button class="btn btn-secondary" id="emptyDayBtn">Try: Plan My Day</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: Task Board & Management -->
+      <div class="hub-tab-content" id="tasksTab">
+        <!-- Task Controls Toolbar -->
+        <div class="tasks-toolbar">
+          <div class="task-search-box">
+            <input type="text" id="taskSearchInput" placeholder="Filter tasks by keyword..." />
+          </div>
+          <div class="task-filter-pills" id="taskFilterPills">
+            <button class="filter-pill active" data-filter="all">All</button>
+            <button class="filter-pill" data-filter="pending">Pending</button>
+            <button class="filter-pill" data-filter="completed">Done</button>
+            <button class="filter-pill" data-filter="high">🔴 High</button>
+            <button class="filter-pill" data-filter="medium">🟡 Med</button>
+            <button class="filter-pill" data-filter="low">🟢 Low</button>
+          </div>
+          <button class="btn btn-primary btn-sm" id="openAddTaskModalBtn">
+            ➕ Add Task
+          </button>
+        </div>
+
+        <!-- Task List Items -->
+        <div class="task-list-container" id="taskListContainer">
+          <!-- Dynamic task cards render here -->
+        </div>
+
+        <!-- Bulk Task Actions Footer -->
+        <div class="tasks-footer">
+          <span class="tasks-counter-text" id="tasksCounterText">0 tasks</span>
+          <div class="tasks-footer-actions">
+            <button class="btn btn-ghost btn-sm" id="clearCompletedBtn">Clear Completed</button>
+            <button class="btn btn-ghost btn-sm" id="resetSampleTasksBtn">Load Sample Tasks</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3: Eisenhower Matrix & Prioritization -->
+      <div class="hub-tab-content" id="prioritiesTab">
+        <div class="priorities-header">
+          <div>
+            <h3>Eisenhower Priority Matrix</h3>
+            <p>Categorized by urgency and importance to help you tackle what matters most.</p>
+          </div>
+          <button class="btn btn-primary btn-sm" id="runAiPrioritizationBtn">
+            🤖 Ask Bedrock to Prioritize
+          </button>
+        </div>
+
+        <div class="eisenhower-grid">
+          <!-- Quadrant 1: Urgent & Important -->
+          <div class="matrix-card q1">
+            <div class="matrix-card-header">
+              <span class="matrix-badge">Q1: DO FIRST</span>
+              <span class="matrix-count" id="q1Count">0</span>
+            </div>
+            <div class="matrix-desc">Urgent &amp; High Importance (Immediate Deadlines)</div>
+            <ul class="matrix-list" id="q1List"></ul>
+          </div>
+
+          <!-- Quadrant 2: Important, Not Urgent -->
+          <div class="matrix-card q2">
+            <div class="matrix-card-header">
+              <span class="matrix-badge">Q2: SCHEDULE</span>
+              <span class="matrix-count" id="q2Count">0</span>
+            </div>
+            <div class="matrix-desc">High Importance, Strategic (Exam Prep, Projects)</div>
+            <ul class="matrix-list" id="q2List"></ul>
+          </div>
+
+          <!-- Quadrant 3: Urgent, Not Important -->
+          <div class="matrix-card q3">
+            <div class="matrix-card-header">
+              <span class="matrix-badge">Q3: QUICK WINS / DELEGATE</span>
+              <span class="matrix-count" id="q3Count">0</span>
+            </div>
+            <div class="matrix-desc">Urgent but Low Complexity (Messages, Check-ins)</div>
+            <ul class="matrix-list" id="q3List"></ul>
+          </div>
+
+          <!-- Quadrant 4: Neither -->
+          <div class="matrix-card q4">
+            <div class="matrix-card-header">
+              <span class="matrix-badge">Q4: MINIMIZE / LATER</span>
+              <span class="matrix-count" id="q4Count">0</span>
+            </div>
+            <div class="matrix-desc">Low Urgency &amp; Low Importance</div>
+            <ul class="matrix-list" id="q4List"></ul>
+          </div>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- MODAL: Add New Task -->
+  <div class="modal-overlay hidden" id="addTaskModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Add New Task</h3>
+        <button class="modal-close-btn" id="closeAddTaskModalBtn">&times;</button>
+      </div>
+      <form id="addTaskForm" class="modal-form">
+        <div class="form-group">
+          <label for="taskTitleInput">Task Title *</label>
+          <input type="text" id="taskTitleInput" placeholder="e.g. Revise Java OOP and Inheritance" required />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="taskPrioritySelect">Priority</label>
+            <select id="taskPrioritySelect">
+              <option value="High">🔴 High Priority</option>
+              <option value="Medium" selected>🟡 Medium Priority</option>
+              <option value="Low">🟢 Low Priority</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="taskCategorySelect">Category</label>
+            <select id="taskCategorySelect">
+              <option value="Study" selected>Study</option>
+              <option value="Work">Work</option>
+              <option value="Coding">Coding</option>
+              <option value="Health">Health</option>
+              <option value="Personal">Personal</option>
+              <option value="General">General</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="taskDueDateInput">Due Date</label>
+            <input type="date" id="taskDueDateInput" />
+          </div>
+          <div class="form-group">
+            <label for="taskEstimateInput">Estimated Duration</label>
+            <input type="text" id="taskEstimateInput" placeholder="e.g. 45m or 2h" value="45m" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="cancelAddTaskBtn">Cancel</button>
+          <button type="submit" class="btn btn-primary">Create Task</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: AWS Bedrock Diagnostics & Configuration -->
+  <div class="modal-overlay hidden" id="settingsModal">
+    <div class="modal-card modal-large">
+      <div class="modal-header">
+        <h3>AWS Bedrock Integration &amp; System Diagnostics</h3>
+        <button class="modal-close-btn" id="closeSettingsModalBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="diagnostics-card" id="diagnosticsCard">
+          <div class="diag-item">
+            <span class="diag-label">Engine Mode:</span>
+            <span class="diag-val" id="diagEngineMode">Checking...</span>
+          </div>
+          <div class="diag-item">
+            <span class="diag-label">AWS Region:</span>
+            <span class="diag-val" id="diagRegion">us-east-1</span>
+          </div>
+          <div class="diag-item">
+            <span class="diag-label">Model ID:</span>
+            <span class="diag-val" id="diagModel">anthropic.claude-3-5-sonnet-20240620-v1:0</span>
+          </div>
+          <div class="diag-item">
+            <span class="diag-label">Server Uptime:</span>
+            <span class="diag-val" id="diagUptime">0s</span>
+          </div>
+        </div>
+
+        <div class="diagnostics-action-block">
+          <button class="btn btn-primary" id="testBedrockBtn">
+            🔍 Test Amazon Bedrock Handshake
+          </button>
+          <div id="bedrockTestResult" class="test-result-box hidden"></div>
+        </div>
+
+        <div class="setup-instructions">
+          <h4>AWS Builder Mini Challenge Setup Guide:</h4>
+          <ol>
+            <li>Create an IAM User in AWS with permissions for <code>bedrock:InvokeModel</code> and <code>bedrock:InvokeModelWithResponseStream</code>.</li>
+            <li>In the <strong>AWS Bedrock Console</strong> (e.g. in <code>us-east-1</code>), navigate to <strong>Model Access</strong> and enable Claude 3.5 Sonnet or Amazon Nova.</li>
+            <li>Open the local <code>.env</code> file in this project and configure:
+              <pre><code>AWS_REGION=us-east-1
+AWS_ACCESS_KEY_ID=AKIA...
+AWS_SECRET_ACCESS_KEY=...
+BEDROCK_MODEL_ID=anthropic.claude-3-5-sonnet-20240620-v1:0</code></pre>
+            </li>
+            <li>Restart the server or click <strong>Test Amazon Bedrock Handshake</strong> above.</li>
+            <li>If credentials are not supplied, LifePilot AI smoothly operates in <strong>Local Simulation Mode</strong> so judges can evaluate all conversational and task flows without cloud credentials!</li>
+          </ol>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="closeSettingsFooterBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Audio Chimes Synthesizer Script & Application Logic -->
+  <script src="app.js"></script>
+</body>
+</html>

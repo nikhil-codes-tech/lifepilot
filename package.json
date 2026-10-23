@@ -1,0 +1,30 @@
+{
+  "name": "lifepilot-ai",
+  "version": "1.0.0",
+  "description": "LifePilot AI — Your Personal Productivity AI Assistant (Simulated Alexa+ experience with Amazon Bedrock integration)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node test/api.test.js && node test/e2e.test.js",
+    "verify-bedrock": "node test/verifyBedrock.js"
+  },
+  "keywords": [
+    "alexa-plus",
+    "amazon-bedrock",
+    "aws-builder",
+    "productivity",
+    "task-management",
+    "study-planner",
+    "ai-assistant",
+    "hackathon"
+  ],
+  "author": "LifePilot AI Team",
+  "license": "MIT",
+  "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.758.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2"
+  }
+}
