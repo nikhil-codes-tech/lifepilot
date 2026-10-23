@@ -5,7 +5,14 @@
  */
 
 const assert = require('assert');
-const { validateTask, analyzePriorities, serializeTasksForContext, extractActionableItems } = require('../utils/taskManager');
+const {
+  validateTask,
+  analyzePriorities,
+  serializeTasksForContext,
+  extractActionableItems,
+  getPrioritizationReason,
+  computeWorkloadMetrics
+} = require('../utils/taskManager');
 const bedrockService = require('../services/bedrockService');
 
 async function runTests() {
@@ -102,6 +109,33 @@ Have a great study session!`;
     assert.strictEqual(extracted.detectedTasks.length, 1);
     assert.strictEqual(extracted.detectedTasks[0].title, 'Revise Java Loops');
     assert.strictEqual(extracted.suggestedPlan.title, 'Java 5-Day Plan');
+  });
+
+  // Unit Test 6: Metadata-based Prioritization Reason Generation
+  test('getPrioritizationReason generates explanation from actual metadata', () => {
+    const today = new Date().toISOString().split('T')[0];
+    const task = {
+      title: 'Complete Java assignment',
+      priority: 'High',
+      dueDate: today
+    };
+    const reason = getPrioritizationReason(task);
+    assert(reason.includes('due today and marked as high priority') || reason.includes('due today'));
+  });
+
+  // Unit Test 7: Workload Metrics Calculation
+  test('computeWorkloadMetrics accurately calculates counts and focus time', () => {
+    const tasks = [
+      { id: '1', title: 'Task 1', priority: 'High', timeEstimate: '2h', estimatedMinutes: 120, completed: false },
+      { id: '2', title: 'Task 2', priority: 'Medium', timeEstimate: '30m', estimatedMinutes: 30, completed: false },
+      { id: '3', title: 'Task 3', priority: 'Low', timeEstimate: '45m', estimatedMinutes: 45, completed: true }
+    ];
+    const metrics = computeWorkloadMetrics(tasks);
+    assert.strictEqual(metrics.totalTasks, 3);
+    assert.strictEqual(metrics.completedCount, 1);
+    assert.strictEqual(metrics.pendingCount, 2);
+    assert.strictEqual(metrics.totalFocusMinutes, 150);
+    assert(metrics.focusTimeString.includes('2.5 hours'));
   });
 
   // Async Test 6: Simulation Engine generates 5-Day Java Exam Plan (FR-06, PDR Section 12)

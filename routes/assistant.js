@@ -7,11 +7,15 @@
 const express = require('express');
 const router = express.Router();
 const bedrockService = require('../services/bedrockService');
-const { analyzePriorities, validateTask } = require('../utils/taskManager');
+const {
+  analyzePriorities,
+  validateTask,
+  computeWorkloadMetrics,
+  getPrioritizationReason
+} = require('../utils/taskManager');
 
 /**
  * POST /api/chat
- * Primary conversational interface endpoint.
  */
 router.post('/chat', async (req, res) => {
   try {
@@ -20,7 +24,7 @@ router.post('/chat', async (req, res) => {
     if (!message || typeof message !== 'string' || !message.trim()) {
       return res.status(400).json({
         success: false,
-        error: 'Message text is required and cannot be empty.'
+        error: 'Message text is required.'
       });
     }
 
@@ -38,7 +42,7 @@ router.post('/chat', async (req, res) => {
     console.error('Error in /api/chat:', error);
     return res.status(500).json({
       success: false,
-      error: 'An internal server error occurred while processing your request.',
+      error: 'An internal error occurred while processing the request.',
       details: error.message
     });
   }
@@ -46,21 +50,19 @@ router.post('/chat', async (req, res) => {
 
 /**
  * POST /api/plan
- * Structured planning endpoint for study or daily schedules.
  */
 router.post('/plan', async (req, res) => {
   try {
-    const { goal, days = 5, hoursPerDay = 4, tasks = [] } = req.body;
+    const { goal, days = 5, hoursPerDay = 3, tasks = [] } = req.body;
 
     if (!goal || typeof goal !== 'string') {
       return res.status(400).json({
         success: false,
-        error: 'A goal or subject is required (e.g., "Java exam", "Sprint planning").'
+        error: 'A goal or subject is required.'
       });
     }
 
-    const prompt = `Create a structured ${days}-day preparation and revision schedule for "${goal.trim()}". Available study time is approximately ${hoursPerDay} hours per day. Break down topics progressively, include practice, and supply specific daily milestones.`;
-    
+    const prompt = `Create a structured ${days}-day preparation and revision schedule for "${goal.trim()}". Available study time is ${hoursPerDay} hours per day. Break down topics progressively, include practice, and supply specific daily milestones.`;
     const result = await bedrockService.processAssistantRequest(prompt, tasks, []);
 
     return res.json({
@@ -79,7 +81,6 @@ router.post('/plan', async (req, res) => {
 
 /**
  * POST /api/prioritize
- * Returns Eisenhower Matrix analysis and Bedrock prioritization recommendations.
  */
 router.post('/prioritize', async (req, res) => {
   try {
@@ -87,7 +88,7 @@ router.post('/prioritize', async (req, res) => {
     const validatedTasks = Array.isArray(tasks) ? tasks : [];
     const localAnalysis = analyzePriorities(validatedTasks);
 
-    const prompt = `Review my current task list and provide a strategic prioritization summary. Tell me what to tackle first, what to schedule, and what to watch out for: ${JSON.stringify(validatedTasks.map(t => ({ title: t.title, priority: t.priority, category: t.category, dueDate: t.dueDate })))}`;
+    const prompt = `Review my current task list and provide a concise, direct prioritization summary. Explain which task to do first based on deadlines and importance: ${JSON.stringify(validatedTasks.map(t => ({ title: t.title, priority: t.priority, category: t.category, dueDate: t.dueDate })))}`;
 
     const result = await bedrockService.processAssistantRequest(prompt, validatedTasks, []);
 
@@ -96,8 +97,8 @@ router.post('/prioritize', async (req, res) => {
       data: {
         analysis: localAnalysis,
         aiRecommendation: result.reply,
-        isSimulated: result.isSimulated,
-        service: result.service
+        serviceStatus: result.serviceStatus,
+        serviceLabel: result.serviceLabel
       }
     });
   } catch (error) {
@@ -111,20 +112,51 @@ router.post('/prioritize', async (req, res) => {
 });
 
 /**
+ * POST /api/metrics
+ */
+router.post('/metrics', (req, res) => {
+  const { tasks = [] } = req.body;
+  const metrics = computeWorkloadMetrics(Array.isArray(tasks) ? tasks : []);
+  return res.json({
+    success: true,
+    data: metrics
+  });
+});
+
+/**
  * GET /api/status
- * System health and AWS Bedrock configuration status.
+ * Truthful status system:
+ * - 'connected': Amazon Bedrock Connected
+ * - 'demo': Demo Mode · Sample Responses
+ * - 'offline': AI Offline · Retry
  */
 router.get('/status', (req, res) => {
-  const configured = bedrockService.isConfigured();
+  const isConfig = bedrockService.isConfigured();
+  const isVerified = bedrockService.hasVerifiedConnection();
+
+  let statusKey = 'demo';
+  let statusLabel = 'Demo Mode · Sample Responses';
+
+  if (isVerified) {
+    statusKey = 'connected';
+    statusLabel = 'Amazon Bedrock Connected';
+  } else if (isConfig) {
+    // Configured in .env, awaiting verification
+    statusKey = 'demo';
+    statusLabel = 'Demo Mode · Sample Responses';
+  }
+
   return res.json({
     status: 'online',
-    appName: 'LifePilot AI',
-    version: '1.0.0',
+    appName: 'LifePilot',
+    tagline: 'Make space for what matters.',
+    aiStatus: statusKey,
+    aiStatusLabel: statusLabel,
     awsBedrock: {
-      configured,
+      configured: isConfig,
+      verified: isVerified,
       region: bedrockService.AWS_REGION,
-      modelId: bedrockService.MODEL_ID,
-      mode: configured ? 'Amazon Bedrock (Live)' : 'Simulation Mode (Local)'
+      modelId: bedrockService.MODEL_ID
     },
     uptime: Math.floor(process.uptime())
   });
@@ -132,7 +164,6 @@ router.get('/status', (req, res) => {
 
 /**
  * POST /api/test-bedrock
- * Diagnostics endpoint to test Amazon Bedrock connectivity.
  */
 router.post('/test-bedrock', async (req, res) => {
   try {
@@ -144,7 +175,11 @@ router.post('/test-bedrock', async (req, res) => {
   } catch (error) {
     return res.status(500).json({
       success: false,
-      error: error.message
+      error: error.message,
+      data: {
+        connected: false,
+        statusLabel: 'AI Offline · Retry'
+      }
     });
   }
 });
