@@ -1,7 +1,7 @@
 /**
  * LifePilot AI — Assistant API Routes
  * Endpoints for conversational chat, structured planning,
- * priority analysis, and Amazon Bedrock diagnostics.
+ * priority analysis, schedule conflict detection, and Bedrock diagnostics.
  */
 
 const express = require('express');
@@ -11,7 +11,9 @@ const {
   analyzePriorities,
   validateTask,
   computeWorkloadMetrics,
-  getPrioritizationReason
+  checkScheduleConflict,
+  getInitialTasks,
+  parseEstimateToMinutes
 } = require('../utils/taskManager');
 
 /**
@@ -112,6 +114,27 @@ router.post('/prioritize', async (req, res) => {
 });
 
 /**
+ * POST /api/check-conflict
+ * Smart Schedule Conflict Detection (Differentiator Feature)
+ */
+router.post('/check-conflict', (req, res) => {
+  const { tasks = [], totalMinutes, availableHours = 3 } = req.body;
+
+  let calculatedMinutes = totalMinutes;
+  if (calculatedMinutes === undefined && Array.isArray(tasks)) {
+    calculatedMinutes = tasks
+      .filter(t => !t.completed)
+      .reduce((sum, t) => sum + (t.estimatedMinutes || parseEstimateToMinutes(t.timeEstimate)), 0);
+  }
+
+  const conflictResult = checkScheduleConflict(calculatedMinutes || 0, availableHours);
+  return res.json({
+    success: true,
+    data: conflictResult
+  });
+});
+
+/**
  * POST /api/metrics
  */
 router.post('/metrics', (req, res) => {
@@ -124,11 +147,17 @@ router.post('/metrics', (req, res) => {
 });
 
 /**
+ * GET /api/initial-tasks
+ */
+router.get('/initial-tasks', (req, res) => {
+  return res.json({
+    success: true,
+    data: getInitialTasks()
+  });
+});
+
+/**
  * GET /api/status
- * Truthful status system:
- * - 'connected': Amazon Bedrock Connected
- * - 'demo': Demo Mode · Sample Responses
- * - 'offline': AI Offline · Retry
  */
 router.get('/status', (req, res) => {
   const isConfig = bedrockService.isConfigured();
@@ -140,10 +169,6 @@ router.get('/status', (req, res) => {
   if (isVerified) {
     statusKey = 'connected';
     statusLabel = 'Amazon Bedrock Connected';
-  } else if (isConfig) {
-    // Configured in .env, awaiting verification
-    statusKey = 'demo';
-    statusLabel = 'Demo Mode · Sample Responses';
   }
 
   return res.json({

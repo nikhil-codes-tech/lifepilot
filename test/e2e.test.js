@@ -91,6 +91,18 @@ async function runE2E() {
         throw new Error(`/api/prioritize test failed: ${JSON.stringify(prioRes)}`);
       }
 
+      // 5. Test POST /api/check-conflict
+      console.log('Testing POST /api/check-conflict...');
+      const conflictRes = await request('POST', '/api/check-conflict', {
+        totalMinutes: 255,
+        availableHours: 3
+      });
+      if (conflictRes.status === 200 && conflictRes.data.success && conflictRes.data.data.hasConflict) {
+        console.log('  ✅ /api/check-conflict detected conflict successfully:', conflictRes.data.data.diffString);
+      } else {
+        throw new Error(`/api/check-conflict test failed: ${JSON.stringify(conflictRes)}`);
+      }
+
       console.log('\n🎉 ALL END-TO-END TESTS PASSED CLEANLY!\n');
       process.exit(0);
     } catch (err) {

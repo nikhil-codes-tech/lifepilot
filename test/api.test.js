@@ -11,7 +11,9 @@ const {
   serializeTasksForContext,
   extractActionableItems,
   getPrioritizationReason,
-  computeWorkloadMetrics
+  computeWorkloadMetrics,
+  checkScheduleConflict,
+  getInitialTasks
 } = require('../utils/taskManager');
 const bedrockService = require('../services/bedrockService');
 
@@ -135,7 +137,30 @@ Have a great study session!`;
     assert.strictEqual(metrics.completedCount, 1);
     assert.strictEqual(metrics.pendingCount, 2);
     assert.strictEqual(metrics.totalFocusMinutes, 150);
-    assert(metrics.focusTimeString.includes('2.5 hours'));
+    assert.strictEqual(metrics.focusTimeString, '2h 30m remaining');
+  });
+
+  // Unit Test 8: Smart Schedule Conflict Detection
+  test('checkScheduleConflict detects when task duration exceeds available time', () => {
+    // 255 minutes of work (4h 15m) with only 3 hours (180 mins) available
+    const conflict = checkScheduleConflict(255, 3);
+    assert.strictEqual(conflict.hasConflict, true);
+    assert.strictEqual(conflict.differenceMinutes, 75);
+    assert.strictEqual(conflict.diffString, '1h 15m');
+    assert(conflict.message.includes('short by 1h 15m'));
+
+    // Sufficient time (120 mins work with 3 hours available)
+    const noConflict = checkScheduleConflict(120, 3);
+    assert.strictEqual(noConflict.hasConflict, false);
+    assert.strictEqual(noConflict.differenceMinutes, 0);
+  });
+
+  // Unit Test 9: Initial Shared Tasks Integrity
+  test('getInitialTasks returns standard shared tasks list', () => {
+    const initial = getInitialTasks();
+    assert.strictEqual(initial.length, 4);
+    assert(initial.some(t => t.title.includes('Review Java')));
+    assert(initial.some(t => t.title.includes('AWS hosting')));
   });
 
   // Async Test 6: Simulation Engine generates 5-Day Java Exam Plan (FR-06, PDR Section 12)

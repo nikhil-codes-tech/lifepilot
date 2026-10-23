@@ -4,18 +4,21 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LifePilot — Make space for what matters</title>
-  <meta name="description" content="LifePilot is a personal AI assistant and workspace combining conversational planning with thoughtful task management and the Eisenhower Decision Matrix.">
+  <meta name="description" content="LifePilot is an intelligent personal productivity assistant and workspace that turns intentions into manageable daily actions.">
   <link rel="stylesheet" href="style.css">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%23181E2A'/><path d='M50 20 L75 50 L50 80 L25 50 Z' fill='%237895F5'/><circle cx='50' cy='50' r='10' fill='%2310141D'/></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23181E2A'/><circle cx='50' cy='50' r='36' stroke='%232A3445' stroke-width='4' fill='none'/><polygon points='50,22 57,47 50,43 43,47' fill='%237895F5'/><polygon points='50,78 57,53 50,57 43,53' fill='%234F6488'/><circle cx='50' cy='50' r='4' fill='%23F1F3F8'/></svg>">
 </head>
 <body class="theme-dark">
   <!-- Top Application Navigation -->
   <header class="app-header">
     <div class="header-left">
-      <div class="brand-mark">
+      <!-- Compass-inspired distinctive visual mark -->
+      <div class="brand-mark" title="LifePilot Compass">
         <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polygon points="12 2 19 12 12 22 5 12 12 2" fill="rgba(120, 149, 245, 0.2)" stroke="var(--primary)"></polygon>
-          <circle cx="12" cy="12" r="2.5" fill="var(--primary)"></circle>
+          <circle cx="12" cy="12" r="9" stroke="var(--border-focus)"></circle>
+          <polygon points="12 4 14.5 11.5 12 10.5 9.5 11.5" fill="var(--primary)" stroke="var(--primary)"></polygon>
+          <polygon points="12 20 14.5 12.5 12 13.5 9.5 12.5" fill="var(--border-focus)" stroke="var(--border-focus)"></polygon>
+          <circle cx="12" cy="12" r="1.5" fill="var(--text)"></circle>
         </svg>
       </div>
       <div class="brand-info">
@@ -35,13 +38,13 @@
     <!-- Right Header Controls -->
     <div class="header-right">
       <!-- Dynamic AI Status System -->
-      <button class="ai-status-pill status-demo" id="aiStatusPill" title="View AI connection details">
+      <button class="ai-status-pill status-demo" id="aiStatusPill" title="View AI connection status & diagnostics">
         <span class="status-indicator-dot"></span>
-        <span class="status-indicator-label" id="aiStatusLabel">Checking AI...</span>
+        <span class="status-indicator-label" id="aiStatusLabel">Demo Mode · Sample Responses</span>
       </button>
 
       <!-- Speech / Voice Narration Toggle -->
-      <button class="header-icon-btn" id="ttsToggleBtn" title="Toggle voice responses" aria-label="Toggle voice responses">
+      <button class="header-icon-btn" id="ttsToggleBtn" title="Toggle voice narration (Text-to-Speech)" aria-label="Toggle voice narration">
         <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
           <path id="ttsWavePath" d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14"></path>
@@ -49,7 +52,7 @@
       </button>
 
       <!-- Settings & AWS Diagnostics -->
-      <button class="header-icon-btn" id="settingsBtn" title="Settings & AWS Diagnostics" aria-label="Settings">
+      <button class="header-icon-btn" id="settingsBtn" title="AWS Bedrock & System Settings" aria-label="Settings">
         <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="3"></circle>
           <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
@@ -60,21 +63,17 @@
 
   <!-- Mobile View Switcher -->
   <div class="mobile-nav-bar" id="mobileNavBar">
-    <button class="mobile-nav-btn active" data-mobile-view="assistant">
-      <span>Assistant</span>
-    </button>
-    <button class="mobile-nav-btn" data-mobile-view="workspace">
-      <span>Workspace</span>
-    </button>
+    <button class="mobile-nav-btn active" data-mobile-view="assistant">Assistant</button>
+    <button class="mobile-nav-btn" data-mobile-view="workspace">Workspace</button>
   </div>
 
-  <!-- Main Application Body: Two-Column Architecture -->
+  <!-- Main Application Layout: Two Columns -->
   <main class="app-layout">
     
-    <!-- LEFT PANEL: Conversation Assistant -->
+    <!-- LEFT PANEL: Productivity Copilot -->
     <aside class="assistant-column" id="assistantColumn">
       
-      <!-- Compact Assistant Identity -->
+      <!-- Compact Assistant Header -->
       <div class="assistant-header-bar">
         <div class="assistant-id">
           <span class="assistant-sparkle">✦</span>
@@ -85,12 +84,12 @@
         </div>
       </div>
 
-      <!-- Compact Suggested Prompts (Scrollable pills) -->
+      <!-- Compact Suggested Prompts -->
       <div class="suggested-prompts-row" id="suggestedPromptsRow">
         <button class="prompt-pill" data-prompt="Help me plan my day.">Plan my day</button>
-        <button class="prompt-pill" data-prompt="I have five days to prepare for my Java examination. I can study two hours daily.">5-day Java study plan</button>
         <button class="prompt-pill" data-prompt="What should I prioritize today?">Prioritize my tasks</button>
-        <button class="prompt-pill" data-prompt="Add a task to complete project slides by tomorrow.">Add a task</button>
+        <button class="prompt-pill" data-prompt="I have five days to prepare for my Java examination. I can study two hours daily.">5-day Java study plan</button>
+        <button class="prompt-pill" data-prompt="Add a task to prepare deployment slides by tomorrow.">Add a task</button>
         <button class="prompt-pill" data-prompt="Summarize my pending tasks.">Summarize tasks</button>
       </div>
 
@@ -99,7 +98,14 @@
         <!-- Message bubbles dynamically render here -->
       </div>
 
-      <!-- Fixed Message Composer Area -->
+      <!-- Loading / Processing Banner -->
+      <div class="ai-processing-indicator hidden" id="aiProcessingIndicator">
+        <span class="processing-spinner"></span>
+        <span class="processing-text" id="processingText">Building your plan...</span>
+        <button class="btn btn-ghost btn-sm" id="cancelRequestBtn">Cancel</button>
+      </div>
+
+      <!-- Fixed Message Composer -->
       <div class="composer-container">
         <!-- Voice Input State Indicator (Visible only when voice is active) -->
         <div class="voice-indicator-banner hidden" id="voiceIndicatorBanner">
@@ -113,7 +119,7 @@
             <textarea
               id="composerInput"
               class="composer-textarea"
-              placeholder="Ask LifePilot anything... (e.g. 'Plan my day', 'Java exam in 5 days')"
+              placeholder="Ask LifePilot anything... (e.g. 'Help me plan my day', 'Prioritize my tasks')"
               rows="1"
               required
             ></textarea>
@@ -146,30 +152,43 @@
            ==================================================================== -->
       <div class="workspace-view active" id="viewOverview">
         
-        <!-- Welcome & Date Header -->
-        <div class="view-header-block">
-          <div>
-            <h1 class="greeting-heading" id="overviewGreeting">Good morning</h1>
-            <p class="greeting-subtitle">Let's make today count.</p>
+        <!-- Welcome, Date & Dynamic Daily Summary -->
+        <div class="overview-header-card">
+          <div class="overview-title-row">
+            <div>
+              <h1 class="greeting-heading" id="overviewGreeting">Good morning</h1>
+              <p class="greeting-summary-line" id="overviewDailySummary">
+                You have 3 pending tasks, including 2 high-priority items.
+              </p>
+            </div>
+            <div class="greeting-date" id="overviewDate">Thursday, October 23</div>
           </div>
-          <div class="greeting-date" id="overviewDate">Thursday, October 23</div>
         </div>
 
-        <!-- 3 Workload Stat Cards (Derived from real application state) -->
+        <!-- 3 Workload Stat Cards (Derived directly from real task data) -->
         <div class="metrics-grid">
           <div class="metric-card">
             <span class="metric-label">Total tasks</span>
-            <span class="metric-value" id="metricTotalTasks">0</span>
-            <span class="metric-hint" id="metricTotalHint">In your active workspace</span>
+            <span class="metric-value" id="metricTotalTasks">4</span>
+            <span class="metric-hint" id="metricTotalHint">3 active, 1 completed</span>
           </div>
+
           <div class="metric-card">
-            <span class="metric-label">Completed</span>
-            <span class="metric-value" id="metricCompletedTasks">0 of 0</span>
-            <span class="metric-hint" id="metricCompletedRate">0% finished</span>
+            <div class="metric-header-flex">
+              <span class="metric-label">Completed</span>
+              <span class="metric-hint" id="metricCompletedFraction">1 of 4 completed</span>
+            </div>
+            <div class="metric-progress-wrapper">
+              <div class="metric-progress-bar">
+                <div class="metric-progress-fill" id="metricProgressFill" style="width: 25%;"></div>
+              </div>
+              <span class="metric-percentage" id="metricCompletedRate">25%</span>
+            </div>
           </div>
+
           <div class="metric-card">
             <span class="metric-label">Focus time</span>
-            <span class="metric-value" id="metricFocusTime">0 hours</span>
+            <span class="metric-value" id="metricFocusTime">4h 15m remaining</span>
             <span class="metric-hint">Estimated pending effort</span>
           </div>
         </div>
@@ -182,7 +201,7 @@
           </div>
 
           <div class="priorities-list-card" id="overviewPrioritiesContainer">
-            <!-- Dynamically populated top priority tasks with explanations -->
+            <!-- Dynamically populated top priority tasks -->
           </div>
         </div>
 
@@ -274,6 +293,21 @@
           </div>
         </div>
 
+        <!-- Schedule Conflict Warning Banner (Smart Conflict Detection) -->
+        <div class="schedule-conflict-banner hidden" id="scheduleConflictBanner">
+          <div class="conflict-left">
+            <span class="conflict-icon">⚠️</span>
+            <div>
+              <div class="conflict-title">Schedule Conflict Detected</div>
+              <div class="conflict-desc" id="conflictMessage">Your tasks exceed the available time.</div>
+            </div>
+          </div>
+          <div class="conflict-actions">
+            <button class="btn btn-secondary btn-sm" id="conflictExtendBtn">Extend available time</button>
+            <button class="btn btn-ghost btn-sm" id="conflictDismissBtn">Dismiss</button>
+          </div>
+        </div>
+
         <!-- Multi-Day Tabs (Day 1, Day 2, etc.) -->
         <div class="day-tabs-container" id="plansDayTabs" style="display: none;">
           <!-- Dynamically populated -->
@@ -307,7 +341,7 @@
               <div class="matrix-box-title">Do First</div>
               <span class="matrix-badge" id="badgeQ1">0</span>
             </div>
-            <p class="matrix-box-desc">Important &amp; urgent. Deadlines due today or critical milestones.</p>
+            <p class="matrix-box-desc">Important &amp; urgent. Imminent deadlines or high-impact milestones.</p>
             <ul class="matrix-task-list" id="listQ1"></ul>
           </div>
 
@@ -321,23 +355,23 @@
             <ul class="matrix-task-list" id="listQ2"></ul>
           </div>
 
-          <!-- Quadrant 3: Delegate / Quick Wins (Urgent, Not Important) -->
+          <!-- Quadrant 3: Delegate (Urgent, Less Important) -->
           <div class="matrix-box quadrant-quick-wins">
             <div class="matrix-box-header">
-              <div class="matrix-box-title">Quick Wins</div>
+              <div class="matrix-box-title">Delegate</div>
               <span class="matrix-badge" id="badgeQ3">0</span>
             </div>
-            <p class="matrix-box-desc">Urgent, less important. Quick communications and operational tasks.</p>
+            <p class="matrix-box-desc">Urgent, less important. Quick syncs and routine follow-ups.</p>
             <ul class="matrix-task-list" id="listQ3"></ul>
           </div>
 
-          <!-- Quadrant 4: Eliminate / Later (Neither) -->
+          <!-- Quadrant 4: Consider Removing (Neither) -->
           <div class="matrix-box quadrant-eliminate">
             <div class="matrix-box-header">
-              <div class="matrix-box-title">Eliminate / Later</div>
+              <div class="matrix-box-title">Consider Removing</div>
               <span class="matrix-badge" id="badgeQ4">0</span>
             </div>
-            <p class="matrix-box-desc">Neither urgent nor important. Defer or remove to preserve energy.</p>
+            <p class="matrix-box-desc">Neither urgent nor important. Defer or eliminate to preserve focus.</p>
             <ul class="matrix-task-list" id="listQ4"></ul>
           </div>
         </div>
@@ -360,12 +394,12 @@
         
         <div class="form-field">
           <label for="taskTitle">Task title *</label>
-          <input type="text" id="taskTitle" placeholder="e.g. Complete Java assignment" required />
+          <input type="text" id="taskTitle" placeholder="e.g. Review Java Object-Oriented Principles" required />
         </div>
 
         <div class="form-field">
           <label for="taskDescription">Description (optional)</label>
-          <input type="text" id="taskDescription" placeholder="Additional details or syllabus references..." />
+          <input type="text" id="taskDescription" placeholder="Additional details or reference notes..." />
         </div>
 
         <div class="form-grid-2">
@@ -399,7 +433,7 @@
 
           <div class="form-field">
             <label for="taskEstimate">Estimated time</label>
-            <input type="text" id="taskEstimate" placeholder="e.g. 45m or 2h" value="45m" />
+            <input type="text" id="taskEstimate" placeholder="e.g. 45m, 1.5h, 2h" value="45m" />
           </div>
         </div>
 
@@ -412,18 +446,18 @@
   </div>
 
   <!-- ====================================================================
-       MODAL: Create New Plan
+       MODAL: Create New Plan (with Smart Schedule Conflict Check)
        ==================================================================== -->
   <div class="modal-backdrop hidden" id="planModal">
     <div class="modal-window">
       <div class="modal-top">
-        <h3>Create New Schedule or Study Plan</h3>
+        <h3>Create Schedule or Study Plan</h3>
         <button class="modal-close" id="closePlanModalBtn">&times;</button>
       </div>
       <form id="planForm" class="modal-form">
         <div class="form-field">
           <label for="planGoal">Subject or Goal *</label>
-          <input type="text" id="planGoal" placeholder="e.g. Java exam, Project sprint, Workday" required />
+          <input type="text" id="planGoal" placeholder="e.g. Java exam, AWS deployment, Workday" required />
         </div>
 
         <div class="form-grid-2">
@@ -434,8 +468,13 @@
 
           <div class="form-field">
             <label for="planDailyHours">Available hours per day</label>
-            <input type="number" id="planDailyHours" min="1" max="12" value="3" />
+            <input type="number" id="planDailyHours" min="1" max="12" value="2" />
           </div>
+        </div>
+
+        <!-- Inline Conflict Warning Preview -->
+        <div class="modal-conflict-hint hidden" id="modalConflictHint">
+          <span id="modalConflictText"></span>
         </div>
 
         <div class="modal-bottom">
@@ -447,7 +486,7 @@
   </div>
 
   <!-- ====================================================================
-       MODAL: Settings & AWS Diagnostics
+       MODAL: Settings & AWS Bedrock Diagnostics
        ==================================================================== -->
   <div class="modal-backdrop hidden" id="settingsModal">
     <div class="modal-window modal-wide">
@@ -478,24 +517,24 @@
 
         <div class="diag-action-block">
           <button class="btn btn-primary" id="testBedrockBtn">
-            Test Amazon Bedrock Connection
+            Test Amazon Bedrock Handshake
           </button>
           <div id="testFeedbackBox" class="test-feedback-box hidden"></div>
         </div>
 
         <div class="instructions-block">
           <h4>AWS Builder Mini Challenge Setup</h4>
-          <p>LifePilot communicates with Amazon Bedrock via server-side credentials stored in <code>.env</code>.</p>
+          <p>LifePilot communicates with Amazon Bedrock via server-side credentials configured in <code>.env</code>.</p>
           <ol>
             <li>Verify <code>bedrock:InvokeModel</code> permissions in IAM.</li>
-            <li>Enable model access in AWS Bedrock Console.</li>
+            <li>Enable model access in the AWS Bedrock Console.</li>
             <li>Configure credentials in <code>.env</code>:
               <pre><code>AWS_REGION=us-east-1
 AWS_ACCESS_KEY_ID=AKIA...
 AWS_SECRET_ACCESS_KEY=...
 BEDROCK_MODEL_ID=anthropic.claude-3-5-sonnet-20240620-v1:0</code></pre>
             </li>
-            <li>When credentials are not present, LifePilot runs in <strong>Demo Mode · Sample Responses</strong> to allow full workflow evaluation.</li>
+            <li>When credentials are not present, LifePilot transparently runs in <strong>Demo Mode · Sample Responses</strong> so reviewers can test every feature immediately.</li>
           </ol>
         </div>
 

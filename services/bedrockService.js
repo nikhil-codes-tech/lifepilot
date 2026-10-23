@@ -2,7 +2,7 @@
  * LifePilot AI — Amazon Bedrock Service
  * Integrates AWS Bedrock Runtime Client (Converse API) for AI generation.
  * Supports Claude 3.5 Sonnet, Claude 3 Haiku, and Amazon Nova.
- * Implements transparent local simulation when credentials are not configured or service is unreachable.
+ * Uses the user's actual tasks as the single source of truth.
  * Tone: Calm, practical, focused on turning intentions into manageable actions.
  */
 
@@ -11,7 +11,10 @@ const {
   serializeTasksForContext,
   analyzePriorities,
   extractActionableItems,
-  getPrioritizationReason
+  computeWorkloadMetrics,
+  checkScheduleConflict,
+  formatDurationRemaining,
+  parseEstimateToMinutes
 } = require('../utils/taskManager');
 
 // Configuration
@@ -23,10 +26,7 @@ let lastVerifiedSuccess = false;
 
 function getBedrockClient() {
   if (!bedrockClient) {
-    const config = {
-      region: AWS_REGION
-    };
-
+    const config = { region: AWS_REGION };
     if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
       config.credentials = {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID,
@@ -36,15 +36,11 @@ function getBedrockClient() {
         config.credentials.sessionToken = process.env.AWS_SESSION_TOKEN;
       }
     }
-
     bedrockClient = new BedrockRuntimeClient(config);
   }
   return bedrockClient;
 }
 
-/**
- * Checks whether Amazon Bedrock credentials appear configured in .env
- */
 function isConfigured() {
   const hasKey = Boolean(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY);
   const isDummy = process.env.AWS_ACCESS_KEY_ID === 'your_aws_access_key_id_here';
@@ -57,32 +53,24 @@ function hasVerifiedConnection() {
 
 /**
  * System Prompt for LifePilot Assistant
- * Tone: Calm, practical, direct, action-oriented. No excessive enthusiasm or marketing fluff.
  */
-const SYSTEM_PROMPT = `You are the LifePilot Assistant.
+const SYSTEM_PROMPT = `You are LifePilot Assistant, a personal productivity copilot.
 Product message: "LifePilot — Make space for what matters."
 
-Your role is to help students, developers, and professionals turn intentions into manageable daily actions.
+CRITICAL RULE: Always use the user's actual task list provided in [CURRENT TASK CONTEXT]. Do NOT invent separate tasks when the user has tasks registered.
 
-Tone & Guidelines:
-1. Calm, direct, and practical. Avoid excessive exclamation marks, hype, or unnecessary filler words.
-2. Structure your replies into:
-   - A brief, practical acknowledgment.
-   - A concrete schedule, task, or priority recommendation.
-   - Clear next steps.
-3. When prioritizing tasks, explain WHY a task is prioritized using its actual metadata (e.g., due date proximity, priority tag).
-4. When planning or creating tasks, provide your conversational advice first, then output a structured JSON block at the bottom in this EXACT schema so the workspace can populate the timeline and task cards:
-
+Guidelines:
+1. Calm, direct, and concise. No excessive enthusiasm, cheerleading, or redundant timestamps.
+2. Structure responses cleanly:
+   - Brief acknowledgment.
+   - Exact tasks referenced with their actual titles, priorities, and durations.
+   - Actionable next steps or conflict warnings.
+3. Check for schedule conflicts: If total task effort exceeds available time, state the exact shortage and provide options.
+4. When planning or creating tasks, include a structured JSON block at the bottom:
 \`\`\`json
 {
   "tasks": [
-    {
-      "title": "Task title",
-      "priority": "High|Medium|Low",
-      "category": "Study|Work|Personal|Coding|Health|General",
-      "timeEstimate": "45m",
-      "dueDate": "YYYY-MM-DD"
-    }
+    { "title": "Task title", "priority": "High|Medium|Low", "category": "Study|Work|Coding|Health|General", "timeEstimate": "45m", "dueDate": "YYYY-MM-DD" }
   ],
   "plan": {
     "title": "Plan Title",
@@ -90,73 +78,193 @@ Tone & Guidelines:
     "days": [
       {
         "day": 1,
-        "theme": "Day Theme",
+        "theme": "Theme",
         "items": [
-          {
-            "time": "9:00 AM - 10:30 AM",
-            "activity": "Activity name",
-            "description": "Details",
-            "category": "Study",
-            "duration": "90m"
-          }
+          { "time": "9:00 AM - 10:30 AM", "activity": "Activity", "description": "Details", "category": "Study", "duration": "90m" }
         ]
       }
     ]
-  }
+  },
+  "actions": [
+    { "type": "create_plan", "label": "Create my daily plan" }
+  ]
 }
 \`\`\``;
 
 /**
- * Generates structured local responses when running in demo mode.
+ * Generates dynamic responses strictly using actual task data.
  */
 function generateSimulatedResponse(userMessage, currentTasks = []) {
   const lower = userMessage.toLowerCase();
-  const prioritiesData = analyzePriorities(currentTasks);
-  const today = new Date().toISOString().split('T')[0];
+  const pending = currentTasks.filter(t => !t.completed);
+  const todayStr = new Date().toISOString().split('T')[0];
+  const metrics = computeWorkloadMetrics(currentTasks);
 
-  // 1. Revision / Exam Schedule (e.g., Java exam in 5 days)
-  if (lower.includes('exam') || lower.includes('study') || lower.includes('revision') || lower.includes('java')) {
-    const subject = lower.includes('java') ? 'Java' : (lower.match(/(?:for|in)\s+([a-zA-Z0-9#+]+)/i)?.[1] || 'Upcoming Exam');
+  // 1. Prioritize Tasks (Uses actual tasks)
+  if (lower.includes('prioritize') || lower.includes('priority') || lower.includes('eisenhower') || lower.includes('what to do')) {
+    if (pending.length === 0) {
+      return {
+        message: `Your task list is clear. You have no pending items to prioritize. Add a task or ask me to generate a study schedule.`,
+        structuredData: { tasks: [] }
+      };
+    }
+
+    // Sort actual tasks by priority
+    const pOrder = { High: 3, Medium: 2, Low: 1 };
+    const sorted = [...pending].sort((a, b) => pOrder[b.priority] - pOrder[a.priority]);
+
+    let responseText = `Let's look at your **${pending.length} active tasks**:\n\n`;
+    sorted.forEach((t, i) => {
+      const dueInfo = t.dueDate ? ` · Due: ${t.dueDate}` : '';
+      responseText += `${i + 1}. **${t.title}** — ${t.priority} priority${dueInfo} (${t.timeEstimate || '30m'})\n`;
+    });
+
+    const topTask = sorted[0];
+    responseText += `\nI recommend starting with **${topTask.title}** because it is marked as ${topTask.priority} priority.`;
 
     return {
-      message: `Here is a structured 5-day revision plan for **${subject}**. 
+      message: responseText,
+      structuredData: {
+        actions: [
+          { type: 'view_priorities', label: 'View Eisenhower Matrix' },
+          { type: 'create_plan', label: 'Create daily plan around priorities' }
+        ]
+      }
+    };
+  }
 
-The schedule dedicates two to three hours daily, starting with core principles and building toward mock testing and weak-spot revision:
+  // 2. Plan My Day (Builds schedule around user's actual tasks)
+  if (lower.includes('plan my day') || lower.includes('daily plan') || lower.includes('organize my day') || lower.includes('schedule today') || lower === 'today' || lower === 'plan today') {
+    if (pending.length === 0) {
+      return {
+        message: `Your task list is currently clear. Here is a balanced daily focus template to get you started:\n\n` +
+          `- **9:00 AM – 11:00 AM**: Morning Deep Work Block\n` +
+          `- **11:30 AM – 12:30 PM**: Communications & Triage\n` +
+          `- **1:30 PM – 3:30 PM**: Project Implementation\n` +
+          `- **4:00 PM – 4:30 PM**: Daily Wrap-up\n\n` +
+          `You can add specific tasks to customize this schedule.`,
+        structuredData: {
+          plan: {
+            title: "Daily Focus Plan",
+            summary: "Balanced daily schedule with morning focus and afternoon project execution.",
+            days: [
+              {
+                day: 1,
+                theme: "Today's Agenda",
+                items: [
+                  { time: "9:00 AM - 11:00 AM", activity: "Morning Deep Work Block", description: "Focus on your primary goal without interruptions", category: "Work", duration: "120m" },
+                  { time: "11:30 AM - 12:30 PM", activity: "Communications & Triage", description: "Respond to urgent messages and clear administrative items", category: "General", duration: "60m" },
+                  { time: "1:30 PM - 3:30 PM", activity: "Project Implementation", description: "Progress key deliverables and review milestones", category: "Coding", duration: "120m" },
+                  { time: "4:00 PM - 4:30 PM", activity: "Daily Review & Wrap-up", description: "Review accomplishments and set tomorrow's items", category: "Personal", duration: "30m" }
+                ]
+              }
+            ]
+          },
+          actions: [
+            { type: 'open_add_task', label: 'Add a task' },
+            { type: 'create_study_plan', label: 'Generate 5-day Java study plan' }
+          ]
+        }
+      };
+    }
 
-- **Day 1**: Fundamentals, data types, and control flow
-- **Day 2**: Methods, arrays, and string handling
-- **Day 3**: Object-oriented programming (classes, inheritance, polymorphism)
-- **Day 4**: Collections framework and exception handling
-- **Day 5**: Full mock test and review of difficult topics
+    let scheduleItems = [];
+    let startHour = 9;
+    let startMin = 0;
 
-You can review each day's schedule in **My Plans**, or convert all items into your task board with one click.`,
+    pending.slice(0, 4).forEach((task) => {
+      const mins = task.estimatedMinutes || parseEstimateToMinutes(task.timeEstimate);
+      const endTotalMin = startHour * 60 + startMin + mins;
+      const endHour = Math.floor(endTotalMin / 60);
+      const endMin = endTotalMin % 60;
+
+      const formatTime = (h, m) => {
+        const period = h >= 12 ? 'PM' : 'AM';
+        const displayH = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+        const displayM = m < 10 ? `0${m}` : m;
+        return `${displayH}:${displayM} ${period}`;
+      };
+
+      const timeSlot = `${formatTime(startHour, startMin)} - ${formatTime(endHour, endMin)}`;
+      scheduleItems.push({
+        time: timeSlot,
+        activity: task.title,
+        description: task.description || `${task.priority} priority deliverable`,
+        category: task.category || 'Work',
+        duration: task.timeEstimate || `${mins}m`
+      });
+
+      // Add 15 min buffer
+      const nextTotalMin = endTotalMin + 15;
+      startHour = Math.floor(nextTotalMin / 60);
+      startMin = nextTotalMin % 60;
+    });
+
+    let text = `Let's organize your day around your active tasks.\n\nI scheduled **${scheduleItems.length} tasks** for today (${metrics.focusTimeString}):\n\n`;
+    scheduleItems.forEach((item, i) => {
+      text += `${i + 1}. **${item.activity}** (${item.duration}) at ${item.time.split(' - ')[0]}\n`;
+    });
+
+    return {
+      message: text,
+      structuredData: {
+        plan: {
+          title: "Today's Focus Plan",
+          summary: `Day schedule constructed around your ${scheduleItems.length} active tasks.`,
+          days: [
+            {
+              day: 1,
+              theme: "Today's Agenda",
+              items: scheduleItems
+            }
+          ]
+        },
+        actions: [
+          { type: 'accept_plan', label: 'Apply plan to workspace' }
+        ]
+      }
+    };
+  }
+
+  // 3. Multi-Day Study / Revision Plan (e.g. Java exam in 5 days)
+  if (lower.includes('exam') || lower.includes('study') || lower.includes('revision') || lower.includes('java')) {
+    const subject = lower.includes('java') ? 'Java' : (lower.match(/(?:for|in)\s+([a-zA-Z0-9#+]+)/i)?.[1] || 'Computer Science');
+
+    return {
+      message: `Here is your structured 5-day revision plan for **${subject}** (allocating 2 hours daily):\n\n` +
+        `• **Day 1**: Core syntax, primitives, and control flow\n` +
+        `• **Day 2**: Methods, arrays, and string handling\n` +
+        `• **Day 3**: Object-oriented programming (classes, inheritance, polymorphism)\n` +
+        `• **Day 4**: Collections framework and exception handling\n` +
+        `• **Day 5**: Full timed mock test and review of difficult topics\n\n` +
+        `You can review each day under **My Plans** or convert the activities into tasks with one click.`,
       structuredData: {
         plan: {
           title: `5-Day ${subject} Revision Plan`,
-          summary: `5-day preparation schedule allocating 2-3 hours daily from fundamentals to timed practice.`,
+          summary: `5-day preparation plan allocating 2 hours daily from fundamentals to mock practice.`,
           days: [
             {
               day: 1,
               theme: `${subject} Fundamentals & Control Flow`,
               items: [
-                { time: "9:00 AM - 10:30 AM", activity: `${subject} syntax, primitive types, and operators`, description: "Review basic language rules and memory types", category: "Study", duration: "90m" },
-                { time: "11:00 AM - 12:30 PM", activity: "Control flow exercises: loops and branching", description: "Practice conditionals and loop constructs with test problems", category: "Coding", duration: "90m" }
+                { time: "9:00 AM - 10:30 AM", activity: `${subject} syntax, types, and variables`, description: "Review basic language primitives and memory rules", category: "Study", duration: "90m" },
+                { time: "11:00 AM - 11:30 AM", activity: "Control flow exercises: loops and branching", description: "Practice conditionals and loop constructs", category: "Coding", duration: "30m" }
               ]
             },
             {
               day: 2,
               theme: "Methods, Arrays & Strings",
               items: [
-                { time: "9:00 AM - 10:30 AM", activity: "Method definitions, scope, and recursion", description: "Review parameter passing and recursive functions", category: "Study", duration: "90m" },
-                { time: "11:00 AM - 12:30 PM", activity: "1D/2D arrays and string manipulation", description: "Solve array traversal and string immutability exercises", category: "Coding", duration: "90m" }
+                { time: "9:00 AM - 10:30 AM", activity: "Method definitions, scope, and recursion", description: "Review parameter passing and recursion patterns", category: "Study", duration: "90m" },
+                { time: "11:00 AM - 11:30 AM", activity: "1D/2D arrays and string manipulation", description: "Solve array traversal and string immutability exercises", category: "Coding", duration: "30m" }
               ]
             },
             {
               day: 3,
               theme: "Object-Oriented Programming (OOP)",
               items: [
-                { time: "9:00 AM - 11:00 AM", activity: "Classes, objects, inheritance, and polymorphism", description: "Study core OOP paradigms and interface contracts", category: "Study", duration: "120m" },
-                { time: "2:00 PM - 3:30 PM", activity: "OOP design practice problem", description: "Implement a class hierarchy modeling a real-world scenario", category: "Coding", duration: "90m" }
+                { time: "9:00 AM - 10:30 AM", activity: "Classes, objects, inheritance, and polymorphism", description: "Study core OOP paradigms and interface contracts", category: "Study", duration: "90m" },
+                { time: "11:00 AM - 11:30 AM", activity: "OOP design practice problem", description: "Implement a class hierarchy modeling a real scenario", category: "Coding", duration: "30m" }
               ]
             },
             {
@@ -164,114 +272,35 @@ You can review each day's schedule in **My Plans**, or convert all items into yo
               theme: "Collections & Exception Handling",
               items: [
                 { time: "9:00 AM - 10:30 AM", activity: "List, Set, and Map implementations", description: "Compare ArrayList, HashSet, and HashMap performance", category: "Study", duration: "90m" },
-                { time: "11:00 AM - 12:30 PM", activity: "Try-catch blocks and custom exceptions", description: "Write robust error handling patterns", category: "Coding", duration: "90m" }
+                { time: "11:00 AM - 11:30 AM", activity: "Try-catch blocks and custom exceptions", description: "Write robust error handling patterns", category: "Coding", duration: "30m" }
               ]
             },
             {
               day: 5,
               theme: "Timed Mock Examination & Review",
               items: [
-                { time: "9:00 AM - 11:00 AM", activity: "Complete timed practice exam", description: "Simulate test conditions with 25 mixed questions", category: "Study", duration: "120m" },
-                { time: "1:30 PM - 3:00 PM", activity: "Review incorrect answers and refine notes", description: "Consolidate edge cases and high-yield concepts", category: "Study", duration: "90m" }
+                { time: "9:00 AM - 10:30 AM", activity: "Complete timed practice exam", description: "Simulate test conditions with mixed questions", category: "Study", duration: "90m" },
+                { time: "11:00 AM - 11:30 AM", activity: "Review incorrect answers and refine notes", description: "Consolidate edge cases and high-yield concepts", category: "Study", duration: "30m" }
               ]
             }
           ]
         },
         tasks: [
-          { title: `Day 1: ${subject} Fundamentals & Control Flow`, priority: "High", category: "Study", timeEstimate: "3h", dueDate: today },
-          { title: `Day 2: ${subject} Methods, Arrays & Strings`, priority: "High", category: "Study", timeEstimate: "3h", dueDate: today },
-          { title: `Day 3: ${subject} OOP Principles & Classes`, priority: "High", category: "Study", timeEstimate: "3.5h", dueDate: today },
-          { title: `Day 4: ${subject} Collections & Exception Handling`, priority: "High", category: "Study", timeEstimate: "3h", dueDate: today },
-          { title: `Day 5: ${subject} Full Practice Exam & Review`, priority: "High", category: "Study", timeEstimate: "3.5h", dueDate: today }
+          { title: `Day 1: ${subject} Fundamentals & Control Flow`, priority: "High", category: "Study", timeEstimate: "2h", dueDate: todayStr },
+          { title: `Day 2: ${subject} Methods, Arrays & Strings`, priority: "High", category: "Study", timeEstimate: "2h", dueDate: todayStr },
+          { title: `Day 3: ${subject} OOP Principles & Classes`, priority: "High", category: "Study", timeEstimate: "2h", dueDate: todayStr },
+          { title: `Day 4: ${subject} Collections & Exception Handling`, priority: "High", category: "Study", timeEstimate: "2h", dueDate: todayStr },
+          { title: `Day 5: ${subject} Full Practice Exam & Review`, priority: "High", category: "Study", timeEstimate: "2h", dueDate: todayStr }
+        ],
+        actions: [
+          { type: 'view_plans', label: 'View 5-Day Plan' },
+          { type: 'convert_all_tasks', label: 'Add all 5 days to tasks' }
         ]
       }
     };
   }
 
-  // 2. Task Prioritization with Metadata-Based Explanations
-  if (lower.includes('prioritize') || lower.includes('priority') || lower.includes('eisenhower') || lower.includes('what to do')) {
-    const pending = currentTasks.filter(t => !t.completed);
-
-    if (pending.length === 0) {
-      return {
-        message: `You currently have no pending tasks. Add a task or say *"Help me plan my day"* to create a new schedule.`,
-        structuredData: { tasks: [] }
-      };
-    }
-
-    let summary = `Here is how your **${pending.length} pending task${pending.length === 1 ? '' : 's'}** are categorized by priority:\n\n`;
-
-    if (prioritiesData.matrix.urgentImportant.length > 0) {
-      summary += `**Do First (Urgent & Important):**\n`;
-      prioritiesData.matrix.urgentImportant.forEach(t => {
-        summary += `- **${t.title}** (${t.category})\n  *Reason: ${getPrioritizationReason(t)}*\n`;
-      });
-      summary += `\n`;
-    }
-
-    if (prioritiesData.matrix.importantNotUrgent.length > 0) {
-      summary += `**Schedule (Important, Not Urgent):**\n`;
-      prioritiesData.matrix.importantNotUrgent.forEach(t => {
-        summary += `- **${t.title}** (${t.category})\n  *Reason: ${getPrioritizationReason(t)}*\n`;
-      });
-      summary += `\n`;
-    }
-
-    if (prioritiesData.matrix.urgentNotImportant.length > 0) {
-      summary += `**Quick Wins / Delegate:**\n`;
-      prioritiesData.matrix.urgentNotImportant.forEach(t => {
-        summary += `- **${t.title}** (${t.category})\n  *Reason: ${getPrioritizationReason(t)}*\n`;
-      });
-    }
-
-    summary += `\n**Next step:** Start with the first task in your Do First list.`;
-
-    return {
-      message: summary,
-      structuredData: {
-        analysis: prioritiesData
-      }
-    };
-  }
-
-  // 3. Plan My Day
-  if (lower.includes('plan my day') || lower.includes('daily plan') || lower.includes('organize my day') || lower.includes('schedule today') || lower === 'today' || lower === 'plan today') {
-    return {
-      message: `Here is a suggested schedule for today, organized around deep focus in the morning and administrative tasks in the afternoon:
-
-- **9:00 AM – 11:00 AM**: Deep work on your primary task
-- **11:30 AM – 12:30 PM**: Communications, messages, and quick follow-ups
-- **1:30 PM – 3:30 PM**: Secondary focus block and project work
-- **4:00 PM – 4:30 PM**: Daily review and wrap-up
-
-I've populated today's plan on your workspace. You can convert any item to a task as needed.`,
-      structuredData: {
-        plan: {
-          title: "Daily Focus Plan",
-          summary: "Balanced schedule with two focus blocks and structured review periods.",
-          days: [
-            {
-              day: 1,
-              theme: "Today's Schedule",
-              items: [
-                { time: "9:00 AM - 11:00 AM", activity: "Deep Work Block: Primary Priority", description: "Focus on your single most critical deliverable without interruptions", category: "Work", duration: "120m" },
-                { time: "11:30 AM - 12:30 PM", activity: "Triage & Quick Wins", description: "Respond to urgent messages and clear administrative tasks", category: "General", duration: "60m" },
-                { time: "1:30 PM - 3:30 PM", activity: "Secondary Project Implementation", description: "Progress key milestones and review upcoming deadlines", category: "Coding", duration: "120m" },
-                { time: "4:00 PM - 4:30 PM", activity: "Daily Review & Next Day Setup", description: "Check off completed tasks and set tomorrow's top 3 items", category: "Personal", duration: "30m" }
-              ]
-            }
-          ]
-        },
-        tasks: [
-          { title: "Complete morning deep work block", priority: "High", category: "Work", timeEstimate: "2h", dueDate: today },
-          { title: "Review and respond to key messages", priority: "Medium", category: "General", timeEstimate: "1h", dueDate: today },
-          { title: "Project deliverable implementation", priority: "High", category: "Coding", timeEstimate: "2h", dueDate: today }
-        ]
-      }
-    };
-  }
-
-  // 4. Add Task
+  // 4. Add Task Command
   if (lower.startsWith('add') || lower.includes('create task') || lower.includes('remind me')) {
     let cleanTitle = userMessage
       .replace(/^(please\s+)?(add|create|schedule)\s+(a\s+)?task\s+(to\s+)?/i, '')
@@ -289,14 +318,14 @@ I've populated today's plan on your workspace. You can convert any item to a tas
     if (lower.includes('project') || lower.includes('code') || lower.includes('app') || lower.includes('deploy')) category = "Coding";
     else if (lower.includes('exam') || lower.includes('study') || lower.includes('read')) category = "Study";
     else if (lower.includes('workout') || lower.includes('health') || lower.includes('walk')) category = "Health";
-    else if (lower.includes('meeting') || lower.includes('report') || lower.includes('work')) category = "Work";
+    else if (lower.includes('meeting') || lower.includes('report') || lower.includes('slides') || lower.includes('work')) category = "Work";
 
     const dueDate = lower.includes('tomorrow')
       ? new Date(Date.now() + 86400000).toISOString().split('T')[0]
-      : (lower.includes('today') ? today : null);
+      : (lower.includes('today') ? todayStr : null);
 
     return {
-      message: `I've added **"${cleanTitle}"** to your tasks under **${category}** with **${priority}** priority${dueDate ? ` (due ${dueDate})` : ''}.`,
+      message: `I've prepared the task **"${cleanTitle}"** under **${category}** with **${priority}** priority${dueDate ? ` (due ${dueDate})` : ''}.`,
       structuredData: {
         tasks: [
           {
@@ -306,47 +335,54 @@ I've populated today's plan on your workspace. You can convert any item to a tas
             dueDate,
             timeEstimate: "45m"
           }
+        ],
+        actions: [
+          { type: 'view_tasks', label: 'View in My Tasks' }
         ]
       }
     };
   }
 
   // 5. Summarize Tasks
-  if (lower.includes('summarize') || lower.includes('summary') || lower.includes('pending') || lower.includes('status')) {
-    const pending = currentTasks.filter(t => !t.completed);
-    const completed = currentTasks.filter(t => t.completed);
-
-    if (pending.length === 0 && completed.length === 0) {
+  if (lower.includes('summarize') || lower.includes('summary') || lower.includes('my tasks') || lower.includes('status')) {
+    if (pending.length === 0) {
       return {
-        message: `Your task list is empty. You can add a task or generate a daily plan.`,
+        message: `Your task list is clear. All tasks have been completed.`,
         structuredData: {}
       };
     }
 
-    let summaryText = `**Task Summary**: ${pending.length} pending, ${completed.length} completed.\n\n`;
-    if (pending.length > 0) {
-      summaryText += `**Active Tasks:**\n`;
-      pending.forEach((t, i) => {
-        summaryText += `${i + 1}. **${t.title}** · ${t.priority} priority (${t.category})${t.dueDate ? ` · Due: ${t.dueDate}` : ''}\n`;
-      });
-    }
+    let text = `You have **${pending.length} pending task${pending.length === 1 ? '' : 's'}** (${metrics.focusTimeString}):\n\n`;
+    pending.forEach((t, i) => {
+      text += `${i + 1}. **${t.title}** — ${t.priority} priority${t.dueDate ? ` (Due: ${t.dueDate})` : ''}\n`;
+    });
 
     return {
-      message: summaryText,
-      structuredData: {}
+      message: text,
+      structuredData: {
+        actions: [
+          { type: 'view_tasks', label: 'Manage Tasks' },
+          { type: 'create_plan', label: 'Plan My Day' }
+        ]
+      }
     };
   }
 
   // Default calm response
   return {
-    message: `I can help you organize tasks, build revision schedules, and prioritize your day.
+    message: `I can help you organize tasks, build revision schedules, and detect schedule conflicts.
 
 Try asking:
-- *"Plan my day"*
-- *"I have five days to prepare for my Java exam. Help me create a revision plan."*
+- *"Help me plan my day"*
 - *"What should I prioritize today?"*
-- *"Add a task to complete project slides by tomorrow"*`,
-    structuredData: {}
+- *"I have five days to prepare for my Java exam. I can study two hours daily."*
+- *"Add a task to prepare deployment slides by tomorrow"*`,
+    structuredData: {
+      actions: [
+        { type: 'prompt_plan', label: 'Plan my day' },
+        { type: 'prompt_prioritize', label: 'Prioritize my tasks' }
+      ]
+    }
   };
 }
 
@@ -357,7 +393,7 @@ async function processAssistantRequest(userMessage, currentTasks = [], conversat
   const startTime = Date.now();
   const configured = isConfigured();
 
-  // If not configured, transparently use demo mode
+  // If AWS Bedrock is not configured, use local simulation mode
   if (!configured) {
     const simResult = generateSimulatedResponse(userMessage, currentTasks);
     return {
@@ -395,7 +431,7 @@ async function processAssistantRequest(userMessage, currentTasks = [], conversat
       system: [{ text: SYSTEM_PROMPT }],
       inferenceConfig: {
         maxTokens: 1500,
-        temperature: 0.5,
+        temperature: 0.3,
         topP: 0.9
       }
     });

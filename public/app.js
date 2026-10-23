@@ -4,6 +4,93 @@
  */
 
 // ============================================================================
+// Single Shared Task Data Source (Shared with Server & AI Context)
+// ============================================================================
+const todayObj = new Date();
+const fmtDate = (d) => d.toISOString().split('T')[0];
+
+const todayStr = fmtDate(todayObj);
+const tomorrowStr = fmtDate(new Date(Date.now() + 86400000));
+const inTwoDaysStr = fmtDate(new Date(Date.now() + 86400000 * 2));
+const inThreeDaysStr = fmtDate(new Date(Date.now() + 86400000 * 3));
+
+const INITIAL_SHARED_TASKS = [
+  {
+    id: 'task_1',
+    title: 'Review Java Object-Oriented Principles',
+    description: 'Polymorphism, inheritance, and interface contracts practice',
+    priority: 'High',
+    category: 'Study',
+    dueDate: tomorrowStr,
+    timeEstimate: '2h',
+    estimatedMinutes: 120,
+    completed: false,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'task_2',
+    title: 'Deploy LifePilot AI web app to AWS hosting',
+    description: 'Configure environment variables and run verify-bedrock on EC2',
+    priority: 'High',
+    category: 'Coding',
+    dueDate: inTwoDaysStr,
+    timeEstimate: '1.5h',
+    estimatedMinutes: 90,
+    completed: false,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'task_3',
+    title: 'Prepare slides and architecture demo video',
+    description: 'Record 3-minute walkthrough explaining Bedrock Converse integration',
+    priority: 'Medium',
+    category: 'Work',
+    dueDate: inThreeDaysStr,
+    timeEstimate: '45m',
+    estimatedMinutes: 45,
+    completed: false,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'task_4',
+    title: 'Midday walk & hydration break',
+    description: 'Screen-free recovery walk',
+    priority: 'Low',
+    category: 'Health',
+    dueDate: todayStr,
+    timeEstimate: '20m',
+    estimatedMinutes: 20,
+    completed: true,
+    completedAt: new Date().toISOString(),
+    createdAt: new Date().toISOString()
+  }
+];
+
+// Initial conversation history reflecting the exact shared tasks
+const INITIAL_CONVERSATION = [
+  {
+    sender: 'user',
+    text: 'Help me plan my day.',
+    time: '9:30 AM'
+  },
+  {
+    sender: 'assistant',
+    text: `Let's organize your day around your active tasks:
+
+I found three tasks to focus on:
+1. **Review Java Object-Oriented Principles** — High priority (2h)
+2. **Deploy LifePilot AI web app to AWS hosting** — High priority (1.5h)
+3. **Prepare slides and architecture demo video** — Medium priority (45m)
+
+Total estimated effort: **4h 15m remaining**.`,
+    time: '9:30 AM',
+    actions: [
+      { type: 'create_plan', label: 'Create my daily plan' }
+    ]
+  }
+];
+
+// ============================================================================
 // State Management
 // ============================================================================
 const state = {
@@ -19,139 +106,64 @@ const state = {
   isListening: false,
   isThinking: false,
   aiStatus: 'demo',
-  aiStatusLabel: 'Demo Mode · Sample Responses'
+  aiStatusLabel: 'Demo Mode · Sample Responses',
+  activeAbortController: null,
+  conflictData: null
 };
-
-// ============================================================================
-// Sample Starter Tasks
-// ============================================================================
-const todayStr = new Date().toISOString().split('T')[0];
-const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split('T')[0];
-const inThreeDaysStr = new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0];
-
-const INITIAL_SAMPLE_TASKS = [
-  {
-    id: 'task_sample_1',
-    title: 'Complete Java assignment',
-    description: 'OOP inheritance and class hierarchy exercises',
-    priority: 'High',
-    category: 'Study',
-    dueDate: todayStr,
-    timeEstimate: '2h',
-    estimatedMinutes: 120,
-    completed: false,
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 'task_sample_2',
-    title: 'Review lecture notes',
-    description: 'Summarize key takeaways from yesterday’s lecture',
-    priority: 'Medium',
-    category: 'Study',
-    dueDate: tomorrowStr,
-    timeEstimate: '45m',
-    estimatedMinutes: 45,
-    completed: false,
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 'task_sample_3',
-    title: 'Practice coding problems',
-    description: 'Solve 3 array and string interview questions',
-    priority: 'Medium',
-    category: 'Coding',
-    dueDate: inThreeDaysStr,
-    timeEstimate: '1h',
-    estimatedMinutes: 60,
-    completed: false,
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 'task_sample_4',
-    title: 'Hydration & 20-minute walk',
-    description: 'Midday wellness break',
-    priority: 'Low',
-    category: 'Health',
-    dueDate: todayStr,
-    timeEstimate: '20m',
-    estimatedMinutes: 20,
-    completed: true,
-    completedAt: new Date().toISOString(),
-    createdAt: new Date().toISOString()
-  }
-];
 
 // ============================================================================
 // Storage & Persistence
 // ============================================================================
 function loadStateFromStorage() {
   try {
-    const savedTasks = localStorage.getItem('lifepilot_tasks');
+    const savedTasks = localStorage.getItem('lifepilot_tasks_v2');
     if (savedTasks) {
       state.tasks = JSON.parse(savedTasks);
     } else {
-      state.tasks = [...INITIAL_SAMPLE_TASKS];
+      state.tasks = JSON.parse(JSON.stringify(INITIAL_SHARED_TASKS));
       saveTasksToStorage();
     }
 
-    const savedPlan = localStorage.getItem('lifepilot_plan');
+    const savedPlan = localStorage.getItem('lifepilot_plan_v2');
     if (savedPlan) {
       state.currentPlan = JSON.parse(savedPlan);
     }
 
-    const savedHistory = localStorage.getItem('lifepilot_history');
+    const savedHistory = localStorage.getItem('lifepilot_history_v2');
     if (savedHistory) {
       state.conversationHistory = JSON.parse(savedHistory);
     } else {
-      // Clean example conversation
-      state.conversationHistory = [
-        {
-          sender: 'user',
-          text: 'Help me plan my day.',
-          time: '9:30 AM'
-        },
-        {
-          sender: 'assistant',
-          text: `Let's organize your day around your most important tasks. You have one deadline today, so I suggest starting there:
-
-1. **Complete Java assignment** (High priority · Due today)
-2. **Review lecture notes** (Medium priority)
-3. **Practice coding problems** (Medium priority)
-
-I've organized these priorities on your dashboard. Let me know if you would like to adjust the schedule.`,
-          time: '9:30 AM'
-        }
-      ];
+      state.conversationHistory = JSON.parse(JSON.stringify(INITIAL_CONVERSATION));
       saveHistoryToStorage();
     }
   } catch (e) {
-    console.error('Error loading localStorage state:', e);
-    state.tasks = [...INITIAL_SAMPLE_TASKS];
+    console.error('Storage parse error:', e);
+    state.tasks = JSON.parse(JSON.stringify(INITIAL_SHARED_TASKS));
   }
 }
 
 function saveTasksToStorage() {
-  localStorage.setItem('lifepilot_tasks', JSON.stringify(state.tasks));
+  localStorage.setItem('lifepilot_tasks_v2', JSON.stringify(state.tasks));
   renderAllViews();
 }
 
 function savePlanToStorage() {
   if (state.currentPlan) {
-    localStorage.setItem('lifepilot_plan', JSON.stringify(state.currentPlan));
+    localStorage.setItem('lifepilot_plan_v2', JSON.stringify(state.currentPlan));
   } else {
-    localStorage.removeItem('lifepilot_plan');
+    localStorage.removeItem('lifepilot_plan_v2');
   }
   renderOverviewPlan();
   renderPlansView();
 }
 
 function saveHistoryToStorage() {
-  localStorage.setItem('lifepilot_history', JSON.stringify(state.conversationHistory));
+  localStorage.setItem('lifepilot_history_v2', JSON.stringify(state.conversationHistory));
   renderConversationStream();
 }
 
 // ============================================================================
-// Helpers & Calculations
+// Duration & Math Utilities
 // ============================================================================
 function parseEstimateToMinutes(estimate = '') {
   if (!estimate) return 30;
@@ -164,42 +176,13 @@ function parseEstimateToMinutes(estimate = '') {
   return isNaN(num) ? 30 : Math.round(num);
 }
 
-function formatMinutes(minutes) {
-  if (minutes < 60) return `${minutes} mins`;
-  const hours = (minutes / 60).toFixed(1).replace(/\.0$/, '');
-  return `${hours} hour${hours === '1' ? '' : 's'}`;
-}
-
-function getPrioritizationReason(task) {
-  if (!task) return '';
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  if (!task.dueDate) {
-    return task.priority === 'High'
-      ? 'Prioritized because it is marked as high importance.'
-      : 'Scheduled based on standard workflow priority.';
-  }
-
-  const due = new Date(task.dueDate);
-  due.setHours(0, 0, 0, 0);
-  const diffDays = Math.ceil((due - today) / (1000 * 60 * 60 * 24));
-
-  if (diffDays < 0) {
-    return `Overdue by ${Math.abs(diffDays)} day${Math.abs(diffDays) === 1 ? '' : 's'} — requires prompt attention.`;
-  }
-  if (diffDays === 0) {
-    return task.priority === 'High'
-      ? 'Prioritized because it is due today and has been marked as high priority.'
-      : 'Prioritized because it is due today.';
-  }
-  if (diffDays === 1) {
-    return 'Due tomorrow — scheduled early to maintain momentum.';
-  }
-  if (diffDays <= 3 && task.priority === 'High') {
-    return `Due in ${diffDays} days with high impact on your schedule.`;
-  }
-  return `Due on ${task.dueDate} under ${task.priority.toLowerCase()} priority.`;
+function formatDurationRemaining(minutes) {
+  if (!minutes || minutes <= 0) return '0m remaining';
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h > 0 && m > 0) return `${h}h ${m}m remaining`;
+  if (h > 0) return `${h}h remaining`;
+  return `${m}m remaining`;
 }
 
 function escapeHtml(str) {
@@ -217,7 +200,7 @@ function formatMarkdown(text) {
   let formatted = escapeHtml(text);
   formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
   formatted = formatted.replace(/\*(.*?)\*/g, '<em>$1</em>');
-  formatted = formatted.replace(/(?:^|\n)[-*]\s+(.+)/g, '<li>$1</li>');
+  formatted = formatted.replace(/(?:^|\n)[-•*]\s+(.+)/g, '<li>$1</li>');
   formatted = formatted.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
   formatted = formatted.replace(/\n\n/g, '<br><br>');
   formatted = formatted.replace(/\n/g, '<br>');
@@ -230,35 +213,58 @@ function formatMarkdown(text) {
 function renderOverview() {
   const greetingEl = document.getElementById('overviewGreeting');
   const dateEl = document.getElementById('overviewDate');
+  const summaryLineEl = document.getElementById('overviewDailySummary');
   const now = new Date();
 
-  // Dynamic Greeting based on current hour
+  // Dynamic Greeting based on time
   const hour = now.getHours();
   let greeting = 'Good morning';
   if (hour >= 12 && hour < 17) greeting = 'Good afternoon';
   else if (hour >= 17) greeting = 'Good evening';
   if (greetingEl) greetingEl.textContent = greeting;
 
-  // Format Date (e.g. Thursday, October 23)
-  const options = { weekday: 'long', month: 'long', day: 'numeric' };
-  if (dateEl) dateEl.textContent = now.toLocaleDateString('en-US', options);
+  // Understated Date
+  const dateOptions = { weekday: 'long', month: 'long', day: 'numeric' };
+  if (dateEl) dateEl.textContent = now.toLocaleDateString('en-US', dateOptions);
 
-  // Metrics
+  // Exact Workload Metrics
   const total = state.tasks.length;
-  const completed = state.tasks.filter(t => t.completed).length;
+  const completedTasks = state.tasks.filter(t => t.completed);
   const pendingTasks = state.tasks.filter(t => !t.completed);
-  const pendingMinutes = pendingTasks.reduce((sum, t) => sum + (t.estimatedMinutes || parseEstimateToMinutes(t.timeEstimate)), 0);
-  const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
+  const pendingMinutes = pendingTasks.reduce(
+    (sum, t) => sum + (t.estimatedMinutes || parseEstimateToMinutes(t.timeEstimate)),
+    0
+  );
+  const rate = total > 0 ? Math.round((completedTasks.length / total) * 100) : 0;
 
+  // Dynamic Daily Summary Sentence
+  if (summaryLineEl) {
+    if (pendingTasks.length === 0) {
+      summaryLineEl.textContent = total > 0
+        ? 'Everything is complete. Nice work.'
+        : 'Your task list is clear. Add a task to get started.';
+    } else {
+      const highCount = pendingTasks.filter(t => t.priority === 'High').length;
+      if (highCount > 0) {
+        summaryLineEl.textContent = `You have ${pendingTasks.length} pending task${pendingTasks.length === 1 ? '' : 's'}, including ${highCount} high-priority item${highCount === 1 ? '' : 's'}.`;
+      } else {
+        summaryLineEl.textContent = `You have ${pendingTasks.length} pending task${pendingTasks.length === 1 ? '' : 's'} scheduled.`;
+      }
+    }
+  }
+
+  // Metric Cards
   document.getElementById('metricTotalTasks').textContent = total;
-  document.getElementById('metricCompletedTasks').textContent = `${completed} of ${total}`;
-  document.getElementById('metricCompletedRate').textContent = `${rate}% finished`;
-  document.getElementById('metricFocusTime').textContent = formatMinutes(pendingMinutes);
+  document.getElementById('metricTotalHint').textContent = `${pendingTasks.length} active, ${completedTasks.length} completed`;
+  document.getElementById('metricCompletedFraction').textContent = `${completedTasks.length} of ${total} completed`;
+  document.getElementById('metricCompletedRate').textContent = `${rate}%`;
+  document.getElementById('metricProgressFill').style.width = `${rate}%`;
+  document.getElementById('metricFocusTime').textContent = formatDurationRemaining(pendingMinutes);
 
-  // Top Priorities (Up to 3 tasks)
+  // Today's Priorities
   renderOverviewPriorities(pendingTasks);
 
-  // Plan section
+  // Your Plan
   renderOverviewPlan();
 }
 
@@ -269,32 +275,36 @@ function renderOverviewPriorities(pendingTasks) {
   if (pendingTasks.length === 0) {
     container.innerHTML = `
       <div style="padding: 16px 0; text-align: center; color: var(--text-muted); font-size: var(--font-supporting);">
-        All tasks are completed. You have a clean slate for today.
+        All tasks are complete. No pending priorities for today.
       </div>
     `;
     return;
   }
 
-  // Sort: High priority & tight deadlines first
+  // Sort by priority (High first) and due date
+  const pOrder = { High: 3, Medium: 2, Low: 1 };
   const sorted = [...pendingTasks].sort((a, b) => {
-    const pOrder = { High: 3, Medium: 2, Low: 1 };
     if (pOrder[b.priority] !== pOrder[a.priority]) {
       return pOrder[b.priority] - pOrder[a.priority];
     }
     if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate);
-    if (a.dueDate) return -1;
-    if (b.dueDate) return 1;
     return 0;
   });
 
   const top3 = sorted.slice(0, 3);
+  const today = fmtDate(new Date());
 
-  container.innerHTML = top3.map((task, index) => {
-    const reason = getPrioritizationReason(task);
+  container.innerHTML = top3.map((task) => {
+    let dueLabel = 'No due date';
+    if (task.dueDate) {
+      if (task.dueDate === today) dueLabel = 'Due today';
+      else if (task.dueDate === tomorrowStr) dueLabel = 'Due tomorrow';
+      else dueLabel = `Due: ${task.dueDate}`;
+    }
+
     return `
       <div class="priority-item-row">
         <div class="priority-item-left">
-          <span class="priority-rank">${index + 1}.</span>
           <input 
             type="checkbox" 
             class="task-checkbox-input"
@@ -305,12 +315,14 @@ function renderOverviewPriorities(pendingTasks) {
           <div class="priority-details">
             <span class="priority-task-name">${escapeHtml(task.title)}</span>
             <div class="priority-task-meta">
-              <span class="badge-priority ${task.priority}">${task.priority} priority</span>
-              ${task.dueDate ? `<span>Due: ${task.dueDate}</span>` : '<span>No deadline</span>'}
-              <span>⏱️ ${task.timeEstimate || '30m'}</span>
+              <span class="badge-priority ${task.priority}">${task.priority.toUpperCase()} PRIORITY</span>
+              <span>· ${dueLabel}</span>
+              <span>· ${task.timeEstimate || '30m'} estimated</span>
             </div>
-            <div class="priority-reason-text">${escapeHtml(reason)}</div>
           </div>
+        </div>
+        <div class="priority-actions">
+          <button class="btn btn-ghost btn-sm" onclick="openEditTaskModal('${task.id}')">Edit</button>
         </div>
       </div>
     `;
@@ -326,10 +338,10 @@ function renderOverviewPlan() {
     if (actionsEl) actionsEl.innerHTML = '';
     container.innerHTML = `
       <div class="compact-empty-plan">
-        <h3>Your day starts here.</h3>
-        <p>Create a schedule or add a task to get started.</p>
+        <h3>Ready to organize your day?</h3>
+        <p>Build a focused daily schedule or revision roadmap based on your tasks.</p>
         <div class="compact-plan-actions">
-          <button class="btn btn-primary btn-sm" id="emptyCreatePlanBtn">Create today's plan</button>
+          <button class="btn btn-primary btn-sm" id="emptyCreatePlanBtn">Create a plan</button>
           <button class="btn btn-secondary btn-sm" id="emptyAddTaskBtn">Add a task</button>
         </div>
       </div>
@@ -390,7 +402,7 @@ function renderTasksView() {
     filtered = filtered.filter(t => t.completed);
   }
 
-  // Keyword Search
+  // Search Filter
   if (state.searchQuery.trim()) {
     const q = state.searchQuery.toLowerCase();
     filtered = filtered.filter(t =>
@@ -400,7 +412,7 @@ function renderTasksView() {
     );
   }
 
-  // Sort
+  // Sort Filter
   if (state.taskSort === 'priority') {
     const pOrder = { High: 3, Medium: 2, Low: 1 };
     filtered.sort((a, b) => pOrder[b.priority] - pOrder[a.priority]);
@@ -415,7 +427,7 @@ function renderTasksView() {
     filtered.sort((a, b) => a.title.localeCompare(b.title));
   }
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = fmtDate(new Date());
   const pendingCount = state.tasks.filter(t => !t.completed).length;
 
   if (footerCounter) {
@@ -425,8 +437,8 @@ function renderTasksView() {
   if (filtered.length === 0) {
     container.innerHTML = `
       <div style="padding: 40px; text-align: center; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-card);">
-        <p style="color: var(--text-muted); font-size: var(--font-body); margin-bottom: 12px;">No tasks match your current filter.</p>
-        <button class="btn btn-secondary btn-sm" onclick="openAddTaskModal()">Add a task</button>
+        <p style="color: var(--text-muted); font-size: var(--font-body); margin-bottom: 12px;">Your task list is clear. Add a task to get started.</p>
+        <button class="btn btn-secondary btn-sm" onclick="openAddTaskModal()">+ Add task</button>
       </div>
     `;
     return;
@@ -460,8 +472,8 @@ function renderTasksView() {
           </div>
         </div>
         <div class="task-actions-row">
-          <button class="btn btn-ghost btn-sm" onclick="openEditTaskModal('${task.id}')" title="Edit task">Edit</button>
-          <button class="btn btn-ghost btn-sm" onclick="confirmDeleteTask('${task.id}')" title="Delete task" style="color: var(--danger);">Delete</button>
+          <button class="btn btn-ghost btn-sm" onclick="openEditTaskModal('${task.id}')">Edit</button>
+          <button class="btn btn-ghost btn-sm" onclick="confirmDeleteTask('${task.id}')" style="color: var(--danger);">Delete</button>
         </div>
       </div>
     `;
@@ -469,7 +481,7 @@ function renderTasksView() {
 }
 
 // ============================================================================
-// Render: My Plans View
+// Render: My Plans View (with Smart Schedule Conflict Detection)
 // ============================================================================
 function renderPlansView() {
   const titleEl = document.getElementById('plansViewTitle');
@@ -477,6 +489,31 @@ function renderPlansView() {
   const dayTabsContainer = document.getElementById('plansDayTabs');
   const timelineContainer = document.getElementById('plansTimelineContainer');
   const convertAllBtn = document.getElementById('convertAllPlanTasksBtn');
+  const conflictBanner = document.getElementById('scheduleConflictBanner');
+
+  // Check Schedule Conflict (Differentiator Feature)
+  const pendingTasks = state.tasks.filter(t => !t.completed);
+  const totalMins = pendingTasks.reduce(
+    (sum, t) => sum + (t.estimatedMinutes || parseEstimateToMinutes(t.timeEstimate)),
+    0
+  );
+  const availableHours = 3; // Default workday target
+
+  if (totalMins > availableHours * 60) {
+    const diffMins = totalMins - availableHours * 60;
+    const diffH = Math.floor(diffMins / 60);
+    const diffM = diffMins % 60;
+    const diffStr = diffH > 0 ? `${diffH}h ${diffM}m` : `${diffM}m`;
+    const totalStr = formatDurationRemaining(totalMins).replace(' remaining', '');
+
+    if (conflictBanner) {
+      document.getElementById('conflictMessage').textContent =
+        `Your tasks require approximately ${totalStr}, but you have ${availableHours} hours available. You're short by ${diffStr}.`;
+      conflictBanner.classList.remove('hidden');
+    }
+  } else {
+    conflictBanner?.classList.add('hidden');
+  }
 
   if (!state.currentPlan || !state.currentPlan.days || state.currentPlan.days.length === 0) {
     if (titleEl) titleEl.textContent = 'My Plans';
@@ -488,14 +525,14 @@ function renderPlansView() {
         <div style="padding: 40px; text-align: center; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-card);">
           <h3 style="font-size: var(--font-card-heading); margin-bottom: 6px;">No Active Plan Created</h3>
           <p style="color: var(--text-muted); font-size: var(--font-supporting); margin-bottom: 16px;">
-            LifePilot can build a 5-day study roadmap or an optimized daily itinerary.
+            LifePilot can build a daily itinerary from your tasks or a multi-day exam roadmap.
           </p>
           <div style="display: flex; gap: 10px; justify-content: center;">
-            <button class="btn btn-primary btn-sm" onclick="handleChatSubmit('I have five days to prepare for my Java examination. I can study two hours daily.')">
-              Try: 5-Day Java Exam Plan
+            <button class="btn btn-primary btn-sm" onclick="handleChatSubmit('Help me plan my day.')">
+              Plan My Day
             </button>
-            <button class="btn btn-secondary btn-sm" onclick="handleChatSubmit('Help me plan my day.')">
-              Try: Plan My Day
+            <button class="btn btn-secondary btn-sm" onclick="handleChatSubmit('I have five days to prepare for my Java examination. I can study two hours daily.')">
+              5-Day Java Study Plan
             </button>
           </div>
         </div>
@@ -592,7 +629,7 @@ function renderPrioritiesView() {
     if (task.dueDate) {
       const due = new Date(task.dueDate);
       const diffDays = Math.ceil((due - today) / (1000 * 60 * 60 * 24));
-      if (diffDays <= 2) isUrgent = true;
+      if (diffDays <= 1) isUrgent = true;
     }
 
     if (isHigh && isUrgent) q1.push(task);
@@ -601,7 +638,7 @@ function renderPrioritiesView() {
     else q4.push(task);
   });
 
-  const renderQuad = (listId, badgeId, items, defaultCategory) => {
+  const renderQuad = (listId, badgeId, items) => {
     const listEl = document.getElementById(listId);
     const badgeEl = document.getElementById(badgeId);
     if (badgeEl) badgeEl.textContent = items.length;
@@ -612,10 +649,10 @@ function renderPrioritiesView() {
         listEl.innerHTML = items.map(t => `
           <li class="matrix-task-item">
             <span>${escapeHtml(t.title)}</span>
-            <select onchange="reclassifyTaskPriority('${t.id}', this.value)" title="Move quadrant">
-              <option value="High" ${t.priority === 'High' ? 'selected' : ''}>High</option>
-              <option value="Medium" ${t.priority === 'Medium' ? 'selected' : ''}>Medium</option>
-              <option value="Low" ${t.priority === 'Low' ? 'selected' : ''}>Low</option>
+            <select onchange="reclassifyTaskPriority('${t.id}', this.value)" title="Move category">
+              <option value="High" ${t.priority === 'High' ? 'selected' : ''}>High (Do First / Schedule)</option>
+              <option value="Medium" ${t.priority === 'Medium' ? 'selected' : ''}>Medium (Schedule / Quick Wins)</option>
+              <option value="Low" ${t.priority === 'Low' ? 'selected' : ''}>Low (Consider Removing)</option>
             </select>
           </li>
         `).join('');
@@ -623,10 +660,10 @@ function renderPrioritiesView() {
     }
   };
 
-  renderQuad('listQ1', 'badgeQ1', q1, 'Do First');
-  renderQuad('listQ2', 'badgeQ2', q2, 'Schedule');
-  renderQuad('listQ3', 'badgeQ3', q3, 'Quick Wins');
-  renderQuad('listQ4', 'badgeQ4', q4, 'Eliminate');
+  renderQuad('listQ1', 'badgeQ1', q1);
+  renderQuad('listQ2', 'badgeQ2', q2);
+  renderQuad('listQ3', 'badgeQ3', q3);
+  renderQuad('listQ4', 'badgeQ4', q4);
 }
 
 window.reclassifyTaskPriority = function(taskId, newPriority) {
@@ -638,20 +675,36 @@ window.reclassifyTaskPriority = function(taskId, newPriority) {
 };
 
 // ============================================================================
-// Render: Conversation History Stream
+// Render: Conversation History Stream (with Action Buttons)
 // ============================================================================
 function renderConversationStream() {
   const stream = document.getElementById('conversationStream');
   if (!stream) return;
 
-  stream.innerHTML = state.conversationHistory.map(msg => {
+  stream.innerHTML = state.conversationHistory.map((msg, index) => {
     const isUser = msg.sender === 'user';
-    const timeLabel = msg.time || 'TODAY';
+    const timeLabel = msg.time || '';
+
+    // Render interactive action buttons if present
+    let actionButtonsHtml = '';
+    if (!isUser && msg.actions && Array.isArray(msg.actions) && msg.actions.length > 0) {
+      actionButtonsHtml = `
+        <div class="bubble-action-row">
+          ${msg.actions.map(act => `
+            <button class="bubble-action-btn" onclick="executeAssistantAction('${escapeHtml(act.type)}')">
+              ${escapeHtml(act.label)}
+            </button>
+          `).join('')}
+        </div>
+      `;
+    }
+
     return `
       <div class="chat-turn ${isUser ? 'user' : 'assistant'}">
-        <div class="turn-meta">${isUser ? 'You' : 'LifePilot'} · ${timeLabel}</div>
+        <div class="turn-meta">${isUser ? 'You' : 'LifePilot'}${timeLabel ? ` · ${timeLabel}` : ''}</div>
         <div class="turn-bubble">
           ${formatMarkdown(msg.text)}
+          ${actionButtonsHtml}
         </div>
       </div>
     `;
@@ -669,22 +722,41 @@ function renderAllViews() {
 }
 
 // ============================================================================
+// Assistant Action Buttons Execution
+// ============================================================================
+window.executeAssistantAction = function(actionType) {
+  if (actionType === 'create_plan' || actionType === 'accept_plan') {
+    handleChatSubmit('Help me plan my day.');
+    switchMainView('viewPlans');
+  } else if (actionType === 'view_priorities' || actionType === 'prompt_prioritize') {
+    switchMainView('viewPriorities');
+  } else if (actionType === 'view_tasks') {
+    switchMainView('viewTasks');
+  } else if (actionType === 'view_plans') {
+    switchMainView('viewPlans');
+  } else if (actionType === 'convert_all_tasks') {
+    convertAllPlanItemsToTasks();
+  } else if (actionType === 'open_add_task') {
+    openAddTaskModal();
+  } else if (actionType === 'create_study_plan') {
+    handleChatSubmit('I have five days to prepare for my Java examination. I can study two hours daily.');
+  }
+};
+
+// ============================================================================
 // Navigation: Switching Views
 // ============================================================================
 window.switchMainView = function(viewId) {
   state.activeView = viewId;
 
-  // Header tabs active state
   document.querySelectorAll('.nav-tab').forEach(tab => {
     tab.classList.toggle('active', tab.dataset.view === viewId);
   });
 
-  // Workspace views active state
   document.querySelectorAll('.workspace-view').forEach(view => {
     view.classList.toggle('active', view.id === viewId);
   });
 
-  // If switching on mobile
   const assistantCol = document.getElementById('assistantColumn');
   const workspaceCol = document.getElementById('workspaceColumn');
   if (window.innerWidth <= 900) {
@@ -724,7 +796,7 @@ function openAddTaskModal() {
   document.getElementById('taskDescription').value = '';
   document.getElementById('taskPriority').value = 'Medium';
   document.getElementById('taskCategory').value = 'Study';
-  document.getElementById('taskDueDate').value = todayStr;
+  document.getElementById('taskDueDate').value = tomorrowStr;
   document.getElementById('taskEstimate').value = '45m';
 
   document.getElementById('taskModal').classList.remove('hidden');
@@ -752,7 +824,7 @@ function closeTaskModal() {
   document.getElementById('taskModal').classList.add('hidden');
 }
 
-// Plan to Task Conversions
+// Plan Activities to Task Conversion
 window.convertPlanItemToTask = function(dayNum, itemIndex) {
   if (!state.currentPlan || !state.currentPlan.days) return;
   const dayObj = state.currentPlan.days.find(d => (d.day || 1) === dayNum);
@@ -812,6 +884,7 @@ async function handleChatSubmit(userMessage) {
 
   const inputEl = document.getElementById('composerInput');
   const sendBtn = document.getElementById('sendBtn');
+  const processingIndicator = document.getElementById('aiProcessingIndicator');
   const now = new Date();
   const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
@@ -826,13 +899,20 @@ async function handleChatSubmit(userMessage) {
   if (inputEl) inputEl.value = '';
   if (sendBtn) sendBtn.disabled = true;
 
+  // Processing state
+  processingIndicator?.classList.remove('hidden');
+  updateAiStatusBadge('processing', 'AI Processing');
+
+  state.activeAbortController = new AbortController();
+
   try {
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      signal: state.activeAbortController.signal,
       body: JSON.stringify({
         message: userMessage,
-        tasks: state.tasks,
+        tasks: state.tasks, // Current tasks sent as single source of truth!
         history: state.conversationHistory
       })
     });
@@ -842,15 +922,16 @@ async function handleChatSubmit(userMessage) {
 
     const result = data.data;
 
-    // Append assistant response
+    // Append assistant response with actions
     state.conversationHistory.push({
       sender: 'assistant',
       text: result.reply,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      actions: result.structuredData?.actions || []
     });
     saveHistoryToStorage();
 
-    // Handle structured actions
+    // Handle structured tasks and plans
     if (result.structuredData) {
       if (result.structuredData.tasks && result.structuredData.tasks.length > 0) {
         result.structuredData.tasks.forEach(raw => {
@@ -878,25 +959,43 @@ async function handleChatSubmit(userMessage) {
       }
     }
 
-    // Voice Narration
     if (state.ttsEnabled) {
       speakAssistantReply(result.reply);
     }
 
-    // Update AI Status badge
     updateAiStatusBadge(result.serviceStatus, result.serviceLabel);
 
   } catch (err) {
-    console.error('Chat submit error:', err);
-    state.conversationHistory.push({
-      sender: 'assistant',
-      text: `An error occurred while processing your request: ${err.message}`,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    });
+    if (err.name === 'AbortError') {
+      state.conversationHistory.push({
+        sender: 'assistant',
+        text: 'Request was cancelled.',
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      });
+    } else {
+      console.error('Chat submit error:', err);
+      state.conversationHistory.push({
+        sender: 'assistant',
+        text: `LifePilot couldn't generate a plan right now. ${err.message}`,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        actions: [
+          { type: 'create_plan', label: 'Try again with local demo' }
+        ]
+      });
+      updateAiStatusBadge('offline', 'AI Unavailable');
+    }
     saveHistoryToStorage();
-    updateAiStatusBadge('offline', 'AI Offline · Retry');
   } finally {
+    processingIndicator?.classList.add('hidden');
     if (sendBtn) sendBtn.disabled = false;
+    state.activeAbortController = null;
+  }
+}
+
+// Cancel Request Handler
+function cancelActiveRequest() {
+  if (state.activeAbortController) {
+    state.activeAbortController.abort();
   }
 }
 
@@ -914,7 +1013,7 @@ function setupSpeechCapabilities() {
 
   if (!SpeechRec) {
     if (micBtn) {
-      micBtn.style.opacity = '0.4';
+      micBtn.style.opacity = '0.35';
       micBtn.title = 'Voice input is not supported in this browser.';
     }
     return;
@@ -961,7 +1060,7 @@ function setupSpeechCapabilities() {
       try {
         speechRecognition.start();
       } catch (e) {
-        console.error('Recognition start error:', e);
+        console.error('Recognition error:', e);
       }
     }
   });
@@ -982,13 +1081,11 @@ function stopVoiceListening() {
 function speakAssistantReply(text) {
   if (!state.ttsEnabled || !window.speechSynthesis) return;
   window.speechSynthesis.cancel();
-
-  const clean = text.replace(/[*_#`]/g, '').trim();
+  const clean = text.replace(/[*_#`•]/g, '').trim();
   if (!clean) return;
 
   const utterance = new SpeechSynthesisUtterance(clean);
   utterance.rate = 1.0;
-  utterance.pitch = 1.0;
   window.speechSynthesis.speak(utterance);
 }
 
@@ -1006,7 +1103,7 @@ async function checkSystemStatus() {
     document.getElementById('diagAwsModel').textContent = data.awsBedrock?.modelId || 'anthropic.claude-3-5-sonnet';
     document.getElementById('diagServerUptime').textContent = `${data.uptime || 0} seconds`;
   } catch (err) {
-    updateAiStatusBadge('offline', 'AI Offline · Retry');
+    updateAiStatusBadge('offline', 'AI Unavailable');
   }
 }
 
@@ -1053,12 +1150,12 @@ async function testBedrockHandshake() {
         <strong>${escapeHtml(data.statusLabel || 'Connection Test Failed')}</strong><br>
         ${escapeHtml(data.error || data.message || 'Check IAM keys and Bedrock Model Access.')}
       `;
-      updateAiStatusBadge('offline', 'AI Offline · Retry');
+      updateAiStatusBadge('offline', 'AI Unavailable');
     }
   } catch (e) {
     box.className = 'test-feedback-box error';
     box.textContent = `Request error: ${e.message}`;
-    updateAiStatusBadge('offline', 'AI Offline · Retry');
+    updateAiStatusBadge('offline', 'AI Unavailable');
   } finally {
     btn.disabled = false;
   }
@@ -1110,13 +1207,15 @@ function initializeEventListeners() {
     handleChatSubmit(composerInput.value);
   });
 
-  // Enter to submit, Shift+Enter for newline
   composerInput?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleChatSubmit(composerInput.value);
     }
   });
+
+  // Cancel Request Button
+  document.getElementById('cancelRequestBtn')?.addEventListener('click', cancelActiveRequest);
 
   // Overview quick actions
   document.getElementById('overviewViewAllTasksBtn')?.addEventListener('click', () => {
@@ -1147,7 +1246,7 @@ function initializeEventListeners() {
     renderTasksView();
   });
 
-  // Tasks actions
+  // Task modal open & reset
   document.getElementById('openAddTaskBtn')?.addEventListener('click', openAddTaskModal);
 
   document.getElementById('clearCompletedTasksBtn')?.addEventListener('click', () => {
@@ -1156,11 +1255,11 @@ function initializeEventListeners() {
   });
 
   document.getElementById('loadSampleTasksBtn')?.addEventListener('click', () => {
-    state.tasks = [...INITIAL_SAMPLE_TASKS];
+    state.tasks = JSON.parse(JSON.stringify(INITIAL_SHARED_TASKS));
     saveTasksToStorage();
   });
 
-  // Task Form Submit
+  // Task Form Submit (Add or Edit)
   const taskForm = document.getElementById('taskForm');
   taskForm?.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -1175,7 +1274,6 @@ function initializeEventListeners() {
     if (!title) return;
 
     if (editId) {
-      // Editing existing task
       const existing = state.tasks.find(t => t.id === editId);
       if (existing) {
         existing.title = title;
@@ -1187,7 +1285,6 @@ function initializeEventListeners() {
         existing.estimatedMinutes = parseEstimateToMinutes(timeEstimate);
       }
     } else {
-      // Adding new task
       state.tasks.unshift({
         id: `task_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
         title,
@@ -1216,13 +1313,23 @@ function initializeEventListeners() {
 
   document.getElementById('convertAllPlanTasksBtn')?.addEventListener('click', convertAllPlanItemsToTasks);
 
+  // Schedule conflict buttons
+  document.getElementById('conflictExtendBtn')?.addEventListener('click', () => {
+    document.getElementById('scheduleConflictBanner').classList.add('hidden');
+    alert('Extended available time to 5 hours. Your schedule is now balanced.');
+  });
+
+  document.getElementById('conflictDismissBtn')?.addEventListener('click', () => {
+    document.getElementById('scheduleConflictBanner').classList.add('hidden');
+  });
+
   // Plan Modal Submit
   const planForm = document.getElementById('planForm');
   planForm?.addEventListener('submit', (e) => {
     e.preventDefault();
     const goal = document.getElementById('planGoal').value.trim();
     const days = parseInt(document.getElementById('planDays').value, 10) || 5;
-    const hours = parseInt(document.getElementById('planDailyHours').value, 10) || 3;
+    const hours = parseInt(document.getElementById('planDailyHours').value, 10) || 2;
 
     if (!goal) return;
     document.getElementById('planModal').classList.add('hidden');
@@ -1260,9 +1367,7 @@ function initializeEventListeners() {
     checkSystemStatus();
     settingsModal.classList.remove('hidden');
   };
-  const closeSettings = () => {
-    settingsModal.classList.add('hidden');
-  };
+  const closeSettings = () => settingsModal.classList.add('hidden');
 
   settingsBtn?.addEventListener('click', openSettings);
   aiStatusPill?.addEventListener('click', openSettings);
