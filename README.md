@@ -1,12 +1,31 @@
 # LifePilot AI — Your Personal AI Assistant
 ### *Simulated Alexa+ Productivity Experience powered by Amazon Bedrock*
 
-[![AWS Bedrock](https://img.shields.io/badge/AWS-Amazon%20Bedrock-FF9900?logo=amazon-aws&logoColor=white)](https://aws.amazon.com/bedrock/)
-[![Hackathon](https://img.shields.io/badge/Hackathon-Build%2C%20Ship%2C%20Shape%202026-blue)](https://devpost.com/)
-[![Track](https://img.shields.io/badge/Track-Alexa%2B%20Simulated%20Experience-00c8ff)](#14-alexa-hackathon-alignment)
-[![Mini Challenge](https://img.shields.io/badge/Mini%20Challenge-AWS%20Builder-FF9900)](#15-aws-builder-mini-challenge-alignment)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/Tests-8%2F8%20Passing%20(100%25)-brightgreen)](#testing--verification)
+<p align="center">
+  <img src="public/thumbnail.jpg" alt="LifePilot AI — Your Personal AI Productivity Assistant" width="100%" style="border-radius: 14px; max-width: 880px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);" />
+</p>
+
+<p align="center">
+  <a href="https://aws.amazon.com/bedrock/"><img src="https://img.shields.io/badge/AWS-Amazon%20Bedrock-FF9900?logo=amazon-aws&logoColor=white" alt="AWS Bedrock" /></a>
+  <a href="https://devpost.com/"><img src="https://img.shields.io/badge/Hackathon-Build%2C%20Ship%2C%20Shape%202026-blue" alt="Hackathon" /></a>
+  <a href="#-alexa-hackathon-alignment"><img src="https://img.shields.io/badge/Track-Alexa%2B%20Simulated%20Experience-00c8ff" alt="Alexa+ Track" /></a>
+  <a href="AWS_INTEGRATION.md"><img src="https://img.shields.io/badge/Mini%20Challenge-AWS%20Builder-FF9900" alt="AWS Builder" /></a>
+  <a href="https://github.com/nikhil-codes-tech/lifepilot"><img src="https://img.shields.io/badge/GitHub-Repository-181717?logo=github&logoColor=white" alt="GitHub" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License" /></a>
+  <a href="#-testing--verification"><img src="https://img.shields.io/badge/Tests-17%2F17%20Passing%20(100%25)-brightgreen" alt="Tests" /></a>
+</p>
+
+---
+
+## 📑 Core Documentation Deliverables
+
+For judges, evaluators, and developers, this repository includes dedicated technical specifications:
+
+| Document | Description | Format |
+|---|---|---|
+| **[System Architecture](ARCHITECTURE.md)** | End-to-end 3-layer system design, Mermaid interaction sequence diagrams, data flow, and resiliency patterns | [Markdown](ARCHITECTURE.md) · [Vector SVG](architecture.svg) |
+| **[Setup & Installation Guide](SETUP.md)** | Prerequisites, 3-minute quickstart, AWS IAM configuration, Bedrock model access, and troubleshooting matrix | [Markdown](SETUP.md) |
+| **[AWS Bedrock Integration Report](AWS_INTEGRATION.md)** | AWS Builder Mini Challenge report: Converse API, foundation models, task context serialization, and security | [Markdown](AWS_INTEGRATION.md) |
 
 ---
 
@@ -16,7 +35,7 @@
 
 Inspired by the next-generation **Alexa+** conversational assistant, LifePilot AI allows users to speak or type everyday goals—such as *"I have five days to prepare for my Java exam. Help me create a revision plan"* or *"Help me plan my day"*—and receive structured, time-blocked itineraries that transfer directly into an interactive task board.
 
-Powered server-side by **Amazon Bedrock** (featuring Anthropic Claude 3.5 Sonnet and Amazon Nova via the AWS SDK Converse API), LifePilot AI also provides a transparent, zero-configuration **Local Simulation Engine** so hackathon judges and testers can immediately test every voice, chat, plan, and Kanban flow without requiring immediate AWS cloud credentials.
+Powered server-side by **Amazon Bedrock** (featuring Anthropic Claude 3.5 Sonnet and Amazon Nova via the AWS SDK v3 Converse API), LifePilot AI also provides a transparent, zero-configuration **Local Simulation Engine** so hackathon judges and testers can immediately test every voice, chat, plan, and Kanban flow without requiring immediate AWS cloud credentials.
 
 ---
 
@@ -28,10 +47,11 @@ Powered server-side by **Amazon Bedrock** (featuring Anthropic Claude 3.5 Sonnet
 | **Primary Track** | **Alexa+** (Simulated Experience Route) |
 | **Mini Challenge** | **AWS Builder** (Amazon Bedrock Integration) |
 | **Project Category** | Artificial Intelligence, Productivity & Personal Assistance |
-| **Frontend** | HTML5, CSS3 (Alexa+ Design System), Vanilla JavaScript |
+| **Frontend** | HTML5, CSS3 (Restrained Dark Design System), Vanilla JavaScript |
 | **Backend** | Node.js, Express.js |
 | **AI Integration** | Amazon Bedrock (`@aws-sdk/client-bedrock-runtime`) |
 | **Voice & Audio** | Web Speech API (STT & TTS) + Web Audio API Chime Synthesizer |
+| **Repository** | [https://github.com/nikhil-codes-tech/lifepilot.git](https://github.com/nikhil-codes-tech/lifepilot.git) |
 
 ---
 
@@ -54,6 +74,7 @@ Powered server-side by **Amazon Bedrock** (featuring Anthropic Claude 3.5 Sonnet
 * **1-Click Task Transfer**: Click **"➕ Add to Tasks"** on any scheduled item or **"➕ Add All to Tasks"** to instantly convert AI recommendations into actionable Kanban items.
 
 ### 3. Smart Task Board & Kanban
+* **Single Source of Truth**: The active task board is injected into Bedrock's context prompt, ensuring AI recommendations reflect the user's actual tasks.
 * **Task Prioritization**: Categorized by High (🔴), Medium (🟡), and Low (🟢) priority.
 * **Category Tagging**: Study, Work, Coding, Health, Personal, and General.
 * **Progress Tracking**: Real-time completion percentage, pending counters, and search filtering.
@@ -70,6 +91,12 @@ Powered server-side by **Amazon Bedrock** (featuring Anthropic Claude 3.5 Sonnet
 ---
 
 ## 🏗️ System Architecture
+
+<p align="center">
+  <img src="architecture.svg" alt="LifePilot AI System Architecture Diagram" width="100%" style="border-radius: 12px; max-width: 860px;" />
+</p>
+
+For full architecture documentation and sequence diagrams, see **[ARCHITECTURE.md](ARCHITECTURE.md)**.
 
 ```mermaid
 flowchart TD
@@ -111,7 +138,7 @@ flowchart TD
 
 | Layer | Technology | Purpose |
 |---|---|---|
-| **Frontend** | HTML5, CSS3, JavaScript | Responsive Alexa+ dashboard, glowing ring animations |
+| **Frontend** | HTML5, CSS3, JavaScript | Restrained dark dashboard, glowing Alexa ring animations |
 | **Voice & Audio** | Web Speech API, Web Audio API | Speech-to-text, text-to-speech, synthetic Alexa chimes |
 | **Backend** | Node.js (v18+), Express.js | Server-side execution, REST APIs, input sanitization |
 | **AI Integration** | Amazon Bedrock (`@aws-sdk/client-bedrock-runtime`) | Foundation model inference (Converse API) |
@@ -122,6 +149,8 @@ flowchart TD
 
 ## 🚀 Quick Start Guide
 
+For full step-by-step setup and IAM permissions guide, see **[SETUP.md](SETUP.md)**.
+
 ### Prerequisites
 * [Node.js](https://nodejs.org/) v18.0.0 or higher
 * npm (bundled with Node.js)
@@ -130,8 +159,8 @@ flowchart TD
 ### 1. Installation
 Clone the repository and install dependencies:
 ```bash
-git clone https://github.com/your-username/lifepilot-ai.git
-cd lifepilot-ai
+git clone https://github.com/nikhil-codes-tech/lifepilot.git
+cd lifepilot
 npm install
 ```
 
@@ -149,7 +178,7 @@ AWS_SECRET_ACCESS_KEY=your_secret_key_here
 BEDROCK_MODEL_ID=anthropic.claude-3-5-sonnet-20240620-v1:0
 ```
 
-> **Note for Judges**: If you do not have AWS credentials configured, LifePilot AI **automatically boots in Local Simulation Mode**. All prompts, 5-day study plans, task additions, and Eisenhower matrices work seamlessly right out of the box!
+> **Note for Hackathon Judges**: If you do not have AWS credentials configured, LifePilot AI **automatically boots in Local Simulation Mode**. All prompts, 5-day study plans, task additions, and Eisenhower matrices work seamlessly right out of the box with zero configuration!
 
 ### 3. Verify Bedrock Connectivity
 Run the built-in diagnostic test:
@@ -170,7 +199,7 @@ http://localhost:3000
 
 ## 🧪 Testing & Verification
 
-LifePilot AI includes a comprehensive automated test suite verifying task validation, Eisenhower classification, markdown parsing, simulation generation, and live Express HTTP endpoints.
+LifePilot AI includes a comprehensive automated test suite verifying task validation, Eisenhower classification, markdown parsing, simulation generation, conflict detection, and live Express HTTP endpoints.
 
 Run all tests:
 ```bash
@@ -186,12 +215,16 @@ Expected output:
   ✅ PASS: Prioritization properly classifies tasks into Eisenhower quadrants
   ✅ PASS: serializeTasksForContext returns formatted context string
   ✅ PASS: extractActionableItems extracts structured tasks and plans from markdown
+  ✅ PASS: getPrioritizationReason generates explanation from actual metadata
+  ✅ PASS: computeWorkloadMetrics accurately calculates counts and focus time
+  ✅ PASS: checkScheduleConflict detects when task duration exceeds available time
+  ✅ PASS: getInitialTasks returns standard shared tasks list
   ✅ PASS: Simulation engine creates complete 5-day Java study plan
   ✅ PASS: Simulation engine creates structured daily plan
   ✅ PASS: Simulation engine analyzes and prioritizes tasks
 
 ====================================================
-Test Results: 8/8 passed (100%)
+Test Results: 12/12 passed (100%)
 ====================================================
 
 🚀 Launching E2E Server Test on port 3456
@@ -201,8 +234,12 @@ Testing GET /api/status...
   ✅ /api/status online
 Testing POST /api/chat with Java Exam prompt...
   ✅ /api/chat generated structured 5-day plan successfully!
+     Plan Title: 5-Day Java Revision Plan
+     Days count: 5
 Testing POST /api/prioritize...
   ✅ /api/prioritize calculated Eisenhower matrix and recommendation!
+Testing POST /api/check-conflict...
+  ✅ /api/check-conflict detected conflict successfully: 1h 15m
 
 🎉 ALL END-TO-END TESTS PASSED CLEANLY!
 ```
@@ -214,7 +251,7 @@ Testing POST /api/prioritize...
 | User Request | Expected LifePilot AI Action |
 |---|---|
 | *"I have five days to prepare for my Java exam. Help me create a revision plan."* | Generates a 5-day spaced repetition schedule (Fundamentals, OOP, Collections, Practice, Mock Test) with time blocks and an **"Add All to Tasks"** button. |
-| *"Help me plan my day."* | Constructs an 8-hour workday timeline with deep-work focus blocks, sync slots, and wellbeing breaks. |
+| *"Help me plan my day."* | Constructs an 8-hour workday timeline with deep-work focus blocks, sync slots, and wellbeing breaks based on actual active tasks. |
 | *"What should I prioritize today?"* | Evaluates active tasks against the Eisenhower Matrix and provides a strategic morning focus directive. |
 | *"Add a task to complete my project by tomorrow."* | Extracts title, sets High priority, tags Coding category, sets tomorrow's due date, and mounts to task board. |
 | *"Summarize my pending tasks."* | Generates an executive summary of pending vs completed items. |
@@ -222,6 +259,8 @@ Testing POST /api/prioritize...
 ---
 
 ## 🌐 AWS Builder Mini Challenge Alignment
+
+For complete technical depth, please see **[AWS_INTEGRATION.md](AWS_INTEGRATION.md)**.
 
 * **Service Used**: **Amazon Bedrock** (Runtime API via `@aws-sdk/client-bedrock-runtime`).
 * **Models Supported**:
@@ -232,10 +271,10 @@ Testing POST /api/prioritize...
   * [services/bedrockService.js](services/bedrockService.js): AWS SDK client initialization, `ConverseCommand` dispatch, system prompts, latency tracking, error handling, and local fallback.
   * [routes/assistant.js](routes/assistant.js): REST API endpoints (`/api/chat`, `/api/plan`, `/api/prioritize`, `/api/test-bedrock`).
   * [test/verifyBedrock.js](test/verifyBedrock.js): Standalone verification script for AWS credentials and model access.
-* **AWS Setup Guide**:
+* **AWS Setup Highlights**:
   1. Attach `bedrock:InvokeModel` and `bedrock:InvokeModelWithResponseStream` to your IAM user.
   2. Request access for Claude 3.5 Sonnet or Amazon Nova in the AWS Bedrock Console.
-  3. Supply credentials in `.env` and verify using `npm run verify-bedrock`.
+  3. Supply credentials in `.env` and verify using `npm run verify-bedrock` or the in-app **Test AWS Connection** modal.
 
 ---
 
@@ -252,27 +291,33 @@ LifePilot AI implements the **Simulated Alexa+ Experience** track:
 ## 📁 Repository Structure
 
 ```text
-lifepilot-ai/
+lifepilot/
 │
 ├── public/                     # Presentation Layer (Simulated Alexa+ Web UI)
 │   ├── index.html              # Dashboard markup & accessibility semantics
-│   ├── style.css               # Alexa+ dark/light theme, glowing ring animations
-│   └── app.js                  # Audio synthesizer, Web Speech STT/TTS, task Kanban
+│   ├── style.css               # Restrained dark theme, Alexa glowing ring animations
+│   ├── app.js                  # Audio synthesizer, Web Speech STT/TTS, task Kanban
+│   ├── architecture.svg        # Scalable vector architecture diagram
+│   └── thumbnail.jpg           # Submission thumbnail & project cover banner
 │
 ├── routes/                     # Application API Routes
-│   └── assistant.js            # /api/chat, /api/plan, /api/prioritize, /api/status
+│   └── assistant.js            # /api/chat, /api/plan, /api/prioritize, /api/status, /api/test-bedrock
 │
 ├── services/                   # AI Service Layer
-│   └── bedrockService.js       # Amazon Bedrock SDK integration & simulation fallback
+│   └── bedrockService.js       # Amazon Bedrock Converse API SDK & simulation fallback
 │
 ├── utils/                      # Utilities & Domain Logic
 │   └── taskManager.js          # Task validation, Eisenhower prioritization, context serializer
 │
 ├── test/                       # Verification & Test Suite
-│   ├── api.test.js             # Automated unit and integration tests (8/8 passing)
-│   ├── e2e.test.js             # End-to-end server & HTTP endpoint verification
-│   └── verifyBedrock.js        # AWS Bedrock live handshake utility
+│   ├── api.test.js             # Automated unit tests (12/12 passing)
+│   ├── e2e.test.js             # End-to-end server & HTTP endpoint verification (5/5 passing)
+│   └── verifyBedrock.js        # AWS Bedrock live handshake diagnostic tool
 │
+├── ARCHITECTURE.md             # System architecture specification & sequence diagrams
+├── SETUP.md                    # Step-by-step setup, IAM policy, & installation instructions
+├── AWS_INTEGRATION.md          # AWS Builder mini-challenge technical report
+├── architecture.svg            # Standalone visual architecture vector diagram
 ├── server.js                   # Node.js Express server entrypoint
 ├── package.json                # Dependencies, scripts, and project metadata
 ├── .env.example                # Template for AWS credentials and region

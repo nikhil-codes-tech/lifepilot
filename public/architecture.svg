@@ -1,0 +1,258 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 820" width="1280" height="820">
+  <defs>
+    <!-- Background Gradients -->
+    <radialGradient id="archBgGrad" cx="50%" cy="30%" r="75%">
+      <stop offset="0%" stop-color="#18202F" />
+      <stop offset="50%" stop-color="#10141D" />
+      <stop offset="100%" stop-color="#0A0D14" />
+    </radialGradient>
+
+    <linearGradient id="layerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1B2333" />
+      <stop offset="100%" stop-color="#131924" />
+    </linearGradient>
+
+    <linearGradient id="boxGradPrimary" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#24314A" />
+      <stop offset="100%" stop-color="#182133" />
+    </linearGradient>
+
+    <linearGradient id="boxGradAws" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2E2419" />
+      <stop offset="100%" stop-color="#1E1914" />
+    </linearGradient>
+
+    <linearGradient id="boxGradSim" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1C2E26" />
+      <stop offset="100%" stop-color="#131E19" />
+    </linearGradient>
+
+    <!-- Drop Shadows -->
+    <filter id="cardShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.4" />
+    </filter>
+
+    <filter id="accentGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="0" stdDeviation="8" flood-color="#7895F5" flood-opacity="0.4" />
+    </filter>
+
+    <!-- Markers -->
+    <marker id="arrowIndigo" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 8 5 L 0 9 z" fill="#7895F5" />
+    </marker>
+    <marker id="arrowOrange" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 8 5 L 0 9 z" fill="#FF9900" />
+    </marker>
+    <marker id="arrowGreen" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 8 5 L 0 9 z" fill="#63B995" />
+    </marker>
+
+    <!-- Grid pattern -->
+    <pattern id="archGrid" width="30" height="30" patternUnits="userSpaceOnUse">
+      <path d="M 30 0 L 0 0 0 30" fill="none" stroke="rgba(255, 255, 255, 0.02)" stroke-width="1" />
+    </pattern>
+  </defs>
+
+  <style>
+    .sans { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", Helvetica, Arial, sans-serif; }
+    .title { font-weight: 800; fill: #F1F3F8; }
+    .subtitle { font-weight: 500; fill: #9AA5B7; font-size: 14px; }
+    .layer-heading { font-weight: 700; font-size: 13px; letter-spacing: 0.8px; text-transform: uppercase; fill: #7895F5; }
+    .box-title { font-weight: 700; font-size: 13.5px; fill: #F1F3F8; }
+    .box-desc { font-weight: 400; font-size: 11px; fill: #8A97AC; line-height: 1.35; }
+    .connector-text { font-weight: 600; font-size: 10px; fill: #7895F5; }
+  </style>
+
+  <!-- Background -->
+  <rect width="1280" height="820" fill="url(#archBgGrad)" />
+  <rect width="1280" height="820" fill="url(#archGrid)" />
+
+  <!-- Title Block Header -->
+  <g transform="translate(60, 40)">
+    <!-- Brand Compass -->
+    <rect width="44" height="44" rx="12" fill="#18202D" stroke="rgba(120, 149, 245, 0.4)" stroke-width="1.5" />
+    <circle cx="22" cy="22" r="14" fill="none" stroke="#2A3445" stroke-width="2" />
+    <polygon points="22,10 25.5,21 22,19 18.5,21" fill="#7895F5" />
+    <polygon points="22,34 25.5,23 22,25 18.5,23" fill="#425575" />
+    <circle cx="22" cy="22" r="2" fill="#F1F3F8" />
+
+    <text x="56" y="27" class="sans title" font-size="24">LifePilot AI — System Architecture</text>
+    <text x="56" y="44" class="sans subtitle">End-to-end architecture: Alexa+ Simulated Interface, Express Backend &amp; Amazon Bedrock Foundation Models</text>
+
+    <!-- Hackathon Badges -->
+    <g transform="translate(860, 4)">
+      <rect width="130" height="26" rx="13" fill="rgba(120, 149, 245, 0.15)" stroke="rgba(120, 149, 245, 0.3)" />
+      <text x="65" y="17" text-anchor="middle" class="sans" fill="#91A8FF" font-size="11" font-weight="700">TRACK: ALEXA+</text>
+
+      <rect x="140" width="160" height="26" rx="13" fill="rgba(255, 153, 0, 0.15)" stroke="rgba(255, 153, 0, 0.3)" />
+      <text x="220" y="17" text-anchor="middle" class="sans" fill="#FFB84D" font-size="11" font-weight="700">AWS BUILDER CHALLENGE</text>
+    </g>
+  </g>
+
+  <!-- ========================================================================
+       LAYER 1: USER INTERACTION & INPUT (TOP LAYER)
+       ======================================================================== -->
+  <g transform="translate(60, 115)">
+    <!-- Container -->
+    <rect width="1160" height="110" rx="14" fill="url(#layerGrad)" stroke="#263145" stroke-width="1.5" filter="url(#cardShadow)" />
+    <text x="24" y="26" class="sans layer-heading">1. User Interaction &amp; Multimodal Client Layer</text>
+
+    <!-- Sub-component 1: Voice Input -->
+    <g transform="translate(24, 40)">
+      <rect width="260" height="56" rx="8" fill="url(#boxGradPrimary)" stroke="#313F59" stroke-width="1" />
+      <text x="14" y="24" class="sans box-title">🎙️ Web Speech STT / TTS</text>
+      <text x="14" y="42" class="sans box-desc">Voice input listening &amp; audio speech synthesis</text>
+    </g>
+
+    <!-- Sub-component 2: Copilot Assistant Column -->
+    <g transform="translate(304, 40)">
+      <rect width="270" height="56" rx="8" fill="url(#boxGradPrimary)" stroke="#313F59" stroke-width="1" />
+      <text x="14" y="24" class="sans box-title">✦ Productivity Copilot Chat</text>
+      <text x="14" y="42" class="sans box-desc">Suggested prompts, Markdown stream &amp; actions</text>
+    </g>
+
+    <!-- Sub-component 3: Workspace 4-View -->
+    <g transform="translate(594, 40)">
+      <rect width="310" height="56" rx="8" fill="url(#boxGradPrimary)" stroke="#313F59" stroke-width="1" />
+      <text x="14" y="24" class="sans box-title">📊 4-View Productivity Workspace</text>
+      <text x="14" y="42" class="sans box-desc">Overview · My Tasks · My Plans · Priorities (Eisenhower)</text>
+    </g>
+
+    <!-- Sub-component 4: Local Storage -->
+    <g transform="translate(924, 40)">
+      <rect width="212" height="56" rx="8" fill="url(#boxGradPrimary)" stroke="#313F59" stroke-width="1" />
+      <text x="14" y="24" class="sans box-title">💾 Local Storage Cache</text>
+      <text x="14" y="42" class="sans box-desc">Client persistence for tasks &amp; state</text>
+    </g>
+  </g>
+
+  <!-- Connectors from Layer 1 to Layer 2 -->
+  <path d="M 440,225 L 440,270" stroke="#7895F5" stroke-width="2" stroke-dasharray="4 4" marker-end="url(#arrowIndigo)" />
+  <rect x="360" y="238" width="160" height="20" rx="4" fill="#18202D" stroke="#2A3445" />
+  <text x="440" y="252" text-anchor="middle" class="sans connector-text">HTTP REST / JSON API</text>
+
+  <path d="M 750,225 L 750,270" stroke="#7895F5" stroke-width="2" stroke-dasharray="4 4" marker-end="url(#arrowIndigo)" />
+  <rect x="670" y="238" width="160" height="20" rx="4" fill="#18202D" stroke="#2A3445" />
+  <text x="750" y="252" text-anchor="middle" class="sans connector-text">Tasks &amp; Metric Telemetry</text>
+
+  <!-- ========================================================================
+       LAYER 2: BACKEND APPLICATION SERVER (MIDDLE LAYER)
+       ======================================================================== -->
+  <g transform="translate(60, 275)">
+    <!-- Container -->
+    <rect width="1160" height="150" rx="14" fill="url(#layerGrad)" stroke="#263145" stroke-width="1.5" filter="url(#cardShadow)" />
+    <text x="24" y="26" class="sans layer-heading">2. Backend Application Server (Node.js &amp; Express)</text>
+
+    <!-- Module 1: Server & Static Host -->
+    <g transform="translate(24, 44)">
+      <rect width="250" height="90" rx="8" fill="url(#boxGradPrimary)" stroke="#313F59" stroke-width="1" />
+      <text x="14" y="24" class="sans box-title">server.js (Port 3000)</text>
+      <text x="14" y="44" class="sans box-desc">Express static asset middleware</text>
+      <text x="14" y="60" class="sans box-desc">CORS security &amp; JSON body parser</text>
+      <text x="14" y="76" class="sans box-desc">Process uptime diagnostics</text>
+    </g>
+
+    <!-- Module 2: REST API Routes -->
+    <g transform="translate(294, 44)">
+      <rect width="280" height="90" rx="8" fill="url(#boxGradPrimary)" stroke="#313F59" stroke-width="1" />
+      <text x="14" y="24" class="sans box-title">routes/assistant.js</text>
+      <text x="14" y="44" class="sans box-desc">• POST /api/chat &amp; /api/plan</text>
+      <text x="14" y="60" class="sans box-desc">• POST /api/prioritize &amp; /api/check-conflict</text>
+      <text x="14" y="76" class="sans box-desc">• GET /api/status &amp; POST /api/test-bedrock</text>
+    </g>
+
+    <!-- Module 3: Task Manager & Math Engine -->
+    <g transform="translate(594, 44)">
+      <rect width="270" height="90" rx="8" fill="url(#boxGradPrimary)" stroke="#313F59" stroke-width="1" />
+      <text x="14" y="24" class="sans box-title">utils/taskManager.js</text>
+      <text x="14" y="44" class="sans box-desc">Eisenhower 4-quadrant classification</text>
+      <text x="14" y="60" class="sans box-desc">Schedule conflict math (mins vs budget)</text>
+      <text x="14" y="76" class="sans box-desc">Task context serializer &amp; schema parser</text>
+    </g>
+
+    <!-- Module 4: Bedrock Service Orchestrator -->
+    <g transform="translate(884, 44)">
+      <rect width="252" height="90" rx="8" fill="url(#boxGradPrimary)" stroke="#313F59" stroke-width="1" />
+      <text x="14" y="24" class="sans box-title">services/bedrockService.js</text>
+      <text x="14" y="44" class="sans box-desc">Converse API client setup</text>
+      <text x="14" y="60" class="sans box-desc">Structured system prompt engine</text>
+      <text x="14" y="76" class="sans box-desc">Roundtrip latency &amp; failure analyzer</text>
+    </g>
+  </g>
+
+  <!-- Connectors from Layer 2 to Layer 3 -->
+  <path d="M 400,425 L 400,480" stroke="#FF9900" stroke-width="2.5" marker-end="url(#arrowOrange)" />
+  <rect x="290" y="440" width="220" height="22" rx="4" fill="#1E1914" stroke="#FF9900" stroke-width="1" />
+  <text x="400" y="455" text-anchor="middle" class="sans connector-text" fill="#FFB84D">AWS SDK Converse API (If Configured)</text>
+
+  <path d="M 940,425 L 940,480" stroke="#63B995" stroke-width="2" stroke-dasharray="4 4" marker-end="url(#arrowGreen)" />
+  <rect x="830" y="440" width="220" height="22" rx="4" fill="#131E19" stroke="#63B995" stroke-width="1" />
+  <text x="940" y="455" text-anchor="middle" class="sans connector-text" fill="#63B995">Zero-Downtime Fallback (If No Keys)</text>
+
+  <!-- ========================================================================
+       LAYER 3: AI FOUNDATION & CLOUD INFRASTRUCTURE (BOTTOM LAYER)
+       ======================================================================== -->
+  <g transform="translate(60, 485)">
+    <!-- Container -->
+    <rect width="1160" height="270" rx="14" fill="url(#layerGrad)" stroke="#263145" stroke-width="1.5" filter="url(#cardShadow)" />
+    <text x="24" y="26" class="sans layer-heading">3. AI Foundation Models &amp; Cloud Infrastructure Layer</text>
+
+    <!-- LEFT SUB-CONTAINER: AMAZON WEB SERVICES (AWS BUILDER) -->
+    <g transform="translate(24, 44)">
+      <rect width="660" height="206" rx="10" fill="url(#boxGradAws)" stroke="#FF9900" stroke-width="1.5" />
+      <text x="20" y="28" class="sans" fill="#FFB84D" font-size="14" font-weight="700">
+        ☁️ Amazon Web Services (AWS Builder Mini Challenge)
+      </text>
+
+      <!-- AWS Component 1: Bedrock Runtime API -->
+      <g transform="translate(20, 44)">
+        <rect width="300" height="74" rx="6" fill="#241C12" stroke="#4A3821" stroke-width="1" />
+        <text x="12" y="22" class="sans box-title" fill="#FFD188">Amazon Bedrock Runtime</text>
+        <text x="12" y="40" class="sans box-desc">@aws-sdk/client-bedrock-runtime v3</text>
+        <text x="12" y="56" class="sans box-desc">ConverseCommand with temperature &amp; token control</text>
+      </g>
+
+      <!-- AWS Component 2: Models -->
+      <g transform="translate(340, 44)">
+        <rect width="300" height="74" rx="6" fill="#241C12" stroke="#4A3821" stroke-width="1" />
+        <text x="12" y="22" class="sans box-title" fill="#FFD188">Foundation Models</text>
+        <text x="12" y="40" class="sans box-desc">anthropic.claude-3-5-sonnet-20240620-v1:0</text>
+        <text x="12" y="56" class="sans box-desc">Amazon Nova Micro &amp; Lite compatibility</text>
+      </g>
+
+      <!-- AWS Component 3: Security & Credentials -->
+      <g transform="translate(20, 128)">
+        <rect width="620" height="64" rx="6" fill="#1C160E" stroke="#382A18" stroke-width="1" />
+        <text x="12" y="20" class="sans box-title" font-size="12" fill="#FFB84D">IAM Security &amp; Credential Isolation:</text>
+        <text x="12" y="38" class="sans box-desc">
+          • Isolated in server-side .env (gitignored) · Never exposed to client-side browser JavaScript
+        </text>
+        <text x="12" y="52" class="sans box-desc">
+          • Permissions: bedrock:InvokeModel · Supports temporary STS session tokens (AWS_SESSION_TOKEN)
+        </text>
+      </g>
+    </g>
+
+    <!-- RIGHT SUB-CONTAINER: LOCAL SIMULATION ENGINE (FALLBACK) -->
+    <g transform="translate(704, 44)">
+      <rect width="432" height="206" rx="10" fill="url(#boxGradSim)" stroke="#63B995" stroke-width="1.5" />
+      <text x="20" y="28" class="sans" fill="#63B995" font-size="14" font-weight="700">
+        🛡️ Intelligent Local Simulation Fallback
+      </text>
+
+      <g transform="translate(20, 44)">
+        <rect width="392" height="148" rx="6" fill="#111B16" stroke="#1D382B" stroke-width="1" />
+        <text x="14" y="24" class="sans box-title" fill="#9BE4C4">Zero-Configuration Hackathon Evaluation</text>
+        <text x="14" y="46" class="sans box-desc">Ensures 100% functionality even without AWS keys:</text>
+        <text x="14" y="66" class="sans box-desc">• Dynamic 5-day exam roadmap generator (Java syllabus)</text>
+        <text x="14" y="84" class="sans box-desc">• Single-source task prioritization using real board data</text>
+        <text x="14" y="102" class="sans box-desc">• Realistic token &amp; network latency simulation (180ms)</text>
+        <text x="14" y="120" class="sans box-desc">• Transparent "Demo Mode" diagnostics badge in header</text>
+      </g>
+    </g>
+
+  </g>
+
+  <!-- Bottom Accent Line -->
+  <rect x="0" y="816" width="1280" height="4" fill="url(#primaryGrad)" />
+</svg>
