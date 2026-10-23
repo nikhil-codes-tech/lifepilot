@@ -195,16 +195,141 @@ function escapeHtml(str) {
     .replace(/'/g, '&#039;');
 }
 
+// ============================================================================
+// UI Toast Notifications
+// ============================================================================
+function showToast(message, type = 'info') {
+  const container = document.getElementById('toastContainer');
+  if (!container) return;
+
+  const toast = document.createElement('div');
+  toast.className = `toast-item toast-${type}`;
+  
+  let icon = 'ℹ';
+  if (type === 'success') icon = '✓';
+  else if (type === 'error') icon = '✕';
+  else if (type === 'warning') icon = '⚠️';
+
+  toast.innerHTML = `
+    <span class="toast-icon">${icon}</span>
+    <span class="toast-msg">${escapeHtml(message)}</span>
+  `;
+
+  container.appendChild(toast);
+
+  requestAnimationFrame(() => {
+    toast.classList.add('show');
+  });
+
+  setTimeout(() => {
+    toast.classList.remove('show');
+    toast.classList.add('hide');
+    setTimeout(() => {
+      toast.remove();
+    }, 250);
+  }, 3200);
+}
+
+window.copySnippetToClipboard = function(btn) {
+  const codeEl = btn.closest('.code-snippet-box')?.querySelector('code');
+  if (codeEl) {
+    navigator.clipboard.writeText(codeEl.innerText).then(() => {
+      const orig = btn.textContent;
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = orig;
+        btn.classList.remove('copied');
+      }, 1800);
+      showToast('Code copied to clipboard', 'info');
+    });
+  }
+};
+
+// ============================================================================
+// Advanced Markdown Formatter
+// ============================================================================
 function formatMarkdown(text) {
   if (!text) return '';
-  let formatted = escapeHtml(text);
-  formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-  formatted = formatted.replace(/\*(.*?)\*/g, '<em>$1</em>');
-  formatted = formatted.replace(/(?:^|\n)[-•*]\s+(.+)/g, '<li>$1</li>');
-  formatted = formatted.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
-  formatted = formatted.replace(/\n\n/g, '<br><br>');
-  formatted = formatted.replace(/\n/g, '<br>');
-  return formatted;
+
+  // 1. Extract fenced code blocks first
+  const codeBlocks = [];
+  let processed = text.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, (match, lang, code) => {
+    const idx = codeBlocks.length;
+    codeBlocks.push({ lang: lang || 'code', code: code.trim() });
+    return `___CODE_BLOCK_${idx}___`;
+  });
+
+  // 2. Escape HTML
+  processed = escapeHtml(processed);
+
+  // 3. Inline code
+  processed = processed.replace(/`([^`]+)`/g, '<code class="bubble-inline-code">$1</code>');
+
+  // 4. Bold & Italic
+  processed = processed.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  processed = processed.replace(/(^|[^\*])\*([^\*]+)\*([^\*]|$)/g, '$1<em>$2</em>$3');
+
+  // 5. Line by line parsing for lists, headers, quotes
+  const lines = processed.split('\n');
+  const result = [];
+  let inUl = false;
+  let inOl = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    // Numbered list item: e.g. "1. Task title"
+    const olMatch = trimmed.match(/^(\d+)\.\s+(.*)$/);
+    if (olMatch) {
+      if (inUl) { result.push('</ul>'); inUl = false; }
+      if (!inOl) { result.push('<ol class="bubble-ol">'); inOl = true; }
+      result.push(`<li><span class="ol-num">${olMatch[1]}</span><span class="ol-text">${olMatch[2]}</span></li>`);
+      continue;
+    }
+
+    // Bullet list item: e.g. "- Task" or "* Task" or "• Task"
+    const ulMatch = trimmed.match(/^[-*•]\s+(.*)$/);
+    if (ulMatch) {
+      if (inOl) { result.push('</ol>'); inOl = false; }
+      if (!inUl) { result.push('<ul class="bubble-ul">'); inUl = true; }
+      result.push(`<li>${ulMatch[1]}</li>`);
+      continue;
+    }
+
+    // Close any open lists if on a non-list line
+    if (inOl) { result.push('</ol>'); inOl = false; }
+    if (inUl) { result.push('</ul>'); inUl = false; }
+
+    if (trimmed === '') {
+      result.push('<div class="bubble-spacer"></div>');
+    } else {
+      result.push(`<p class="bubble-p">${line}</p>`);
+    }
+  }
+
+  if (inOl) result.push('</ol>');
+  if (inUl) result.push('</ul>');
+
+  let output = result.join('\n');
+
+  // 6. Restore code blocks with styled header and copy button
+  output = output.replace(/___CODE_BLOCK_(\d+)___/g, (match, idx) => {
+    const item = codeBlocks[idx];
+    const safeCode = escapeHtml(item.code);
+    return `
+      <div class="code-snippet-box">
+        <div class="code-snippet-header">
+          <span class="code-snippet-lang">${escapeHtml(item.lang)}</span>
+          <button type="button" class="code-copy-btn" onclick="copySnippetToClipboard(this)">Copy</button>
+        </div>
+        <pre class="code-snippet-pre"><code>${safeCode}</code></pre>
+      </div>
+    `;
+  });
+
+  return output;
 }
 
 // ============================================================================
@@ -216,14 +341,14 @@ function renderOverview() {
   const summaryLineEl = document.getElementById('overviewDailySummary');
   const now = new Date();
 
-  // Dynamic Greeting based on time
+  // Dynamic Greeting based on time with subtle emoji
   const hour = now.getHours();
   let greeting = 'Good morning';
   if (hour >= 12 && hour < 17) greeting = 'Good afternoon';
   else if (hour >= 17) greeting = 'Good evening';
   if (greetingEl) greetingEl.textContent = greeting;
 
-  // Understated Date
+  // Formatted Date
   const dateOptions = { weekday: 'long', month: 'long', day: 'numeric' };
   if (dateEl) dateEl.textContent = now.toLocaleDateString('en-US', dateOptions);
 
@@ -241,8 +366,8 @@ function renderOverview() {
   if (summaryLineEl) {
     if (pendingTasks.length === 0) {
       summaryLineEl.textContent = total > 0
-        ? 'Everything is complete. Nice work.'
-        : 'Your task list is clear. Add a task to get started.';
+        ? 'All tasks are complete for today. Excellent work!'
+        : 'Your task list is clear. Add a task or ask the assistant to plan your day.';
     } else {
       const highCount = pendingTasks.filter(t => t.priority === 'High').length;
       if (highCount > 0) {
@@ -274,8 +399,9 @@ function renderOverviewPriorities(pendingTasks) {
 
   if (pendingTasks.length === 0) {
     container.innerHTML = `
-      <div style="padding: 16px 0; text-align: center; color: var(--text-muted); font-size: var(--font-supporting);">
-        All tasks are complete. No pending priorities for today.
+      <div style="padding: 24px 0; text-align: center; color: var(--text-muted); font-size: var(--font-supporting);">
+        <p style="margin-bottom: 8px;">🎉 All tasks are complete. No pending priorities for today.</p>
+        <button class="btn btn-secondary btn-sm" onclick="openAddTaskModal()">+ Add a new task</button>
       </div>
     `;
     return;
@@ -296,10 +422,19 @@ function renderOverviewPriorities(pendingTasks) {
 
   container.innerHTML = top3.map((task) => {
     let dueLabel = 'No due date';
+    let dueClass = '';
     if (task.dueDate) {
-      if (task.dueDate === today) dueLabel = 'Due today';
-      else if (task.dueDate === tomorrowStr) dueLabel = 'Due tomorrow';
-      else dueLabel = `Due: ${task.dueDate}`;
+      if (task.dueDate === today) {
+        dueLabel = 'Due today';
+        dueClass = 'due-today';
+      } else if (task.dueDate === tomorrowStr) {
+        dueLabel = 'Due tomorrow';
+      } else if (task.dueDate < today) {
+        dueLabel = `Overdue: ${task.dueDate}`;
+        dueClass = 'due-overdue';
+      } else {
+        dueLabel = `Due: ${task.dueDate}`;
+      }
     }
 
     return `
@@ -315,9 +450,10 @@ function renderOverviewPriorities(pendingTasks) {
           <div class="priority-details">
             <span class="priority-task-name">${escapeHtml(task.title)}</span>
             <div class="priority-task-meta">
-              <span class="badge-priority ${task.priority}">${task.priority.toUpperCase()} PRIORITY</span>
-              <span>· ${dueLabel}</span>
-              <span>· ${task.timeEstimate || '30m'} estimated</span>
+              <span class="badge-priority ${task.priority}">${task.priority}</span>
+              <span class="badge-category cat-${task.category}">${task.category}</span>
+              <span class="badge-due ${dueClass}">📅 ${dueLabel}</span>
+              <span>· ⏱️ ${task.timeEstimate || '30m'}</span>
             </div>
           </div>
         </div>
@@ -429,6 +565,15 @@ function renderTasksView() {
 
   const today = fmtDate(new Date());
   const pendingCount = state.tasks.filter(t => !t.completed).length;
+  const completedCount = state.tasks.filter(t => t.completed).length;
+
+  // Update filter buttons with real counts
+  const allBtn = document.querySelector('#taskStatusFilters [data-filter="all"]');
+  const pendingBtn = document.querySelector('#taskStatusFilters [data-filter="pending"]');
+  const completedBtn = document.querySelector('#taskStatusFilters [data-filter="completed"]');
+  if (allBtn) allBtn.textContent = `All (${state.tasks.length})`;
+  if (pendingBtn) pendingBtn.textContent = `Pending (${pendingCount})`;
+  if (completedBtn) completedBtn.textContent = `Completed (${completedCount})`;
 
   if (footerCounter) {
     footerCounter.textContent = `${filtered.length} task${filtered.length === 1 ? '' : 's'} displayed (${pendingCount} pending)`;
@@ -446,6 +591,22 @@ function renderTasksView() {
 
   container.innerHTML = filtered.map(task => {
     const isOverdue = !task.completed && task.dueDate && task.dueDate < today;
+    let dueLabel = 'No due date';
+    let dueClass = '';
+    if (task.dueDate) {
+      if (task.dueDate === today) {
+        dueLabel = 'Due today';
+        dueClass = 'due-today';
+      } else if (task.dueDate === tomorrowStr) {
+        dueLabel = 'Due tomorrow';
+      } else if (isOverdue) {
+        dueLabel = `Overdue: ${task.dueDate}`;
+        dueClass = 'due-overdue';
+      } else {
+        dueLabel = `Due: ${task.dueDate}`;
+      }
+    }
+
     return `
       <div class="task-item-card ${task.completed ? 'completed' : ''}" data-id="${task.id}">
         <div class="task-item-left">
@@ -461,11 +622,11 @@ function renderTasksView() {
             ${task.description ? `<span class="task-desc-text">${escapeHtml(task.description)}</span>` : ''}
             <div class="task-meta-row">
               <span class="badge-priority ${task.priority}">${task.priority}</span>
-              <span class="badge-category">${task.category}</span>
+              <span class="badge-category cat-${task.category}">${task.category}</span>
               <span>⏱️ ${task.timeEstimate || '30m'}</span>
               ${task.dueDate ? `
-                <span class="${isOverdue ? 'overdue-indicator' : ''}">
-                  📅 ${isOverdue ? 'Overdue: ' : 'Due: '}${task.dueDate}
+                <span class="badge-due ${dueClass}">
+                  📅 ${dueLabel}
                 </span>
               ` : ''}
             </div>
@@ -644,15 +805,23 @@ function renderPrioritiesView() {
     if (badgeEl) badgeEl.textContent = items.length;
     if (listEl) {
       if (items.length === 0) {
-        listEl.innerHTML = `<li style="color: var(--text-subtle); font-size: var(--font-micro); padding: 8px 0;">No active tasks</li>`;
+        listEl.innerHTML = `<li style="color: var(--text-subtle); font-size: var(--font-micro); padding: 12px 0; text-align: center;">No active items</li>`;
       } else {
         listEl.innerHTML = items.map(t => `
           <li class="matrix-task-item">
-            <span>${escapeHtml(t.title)}</span>
-            <select onchange="reclassifyTaskPriority('${t.id}', this.value)" title="Move category">
-              <option value="High" ${t.priority === 'High' ? 'selected' : ''}>High (Do First / Schedule)</option>
-              <option value="Medium" ${t.priority === 'Medium' ? 'selected' : ''}>Medium (Schedule / Quick Wins)</option>
-              <option value="Low" ${t.priority === 'Low' ? 'selected' : ''}>Low (Consider Removing)</option>
+            <div class="matrix-task-left">
+              <input 
+                type="checkbox" 
+                class="task-checkbox-input" 
+                onchange="toggleTaskCompletion('${t.id}')"
+                title="Mark as complete"
+              />
+              <span class="matrix-task-title">${escapeHtml(t.title)}</span>
+            </div>
+            <select onchange="reclassifyTaskPriority('${t.id}', this.value)" class="matrix-priority-select" title="Move quadrant">
+              <option value="High" ${t.priority === 'High' ? 'selected' : ''}>High</option>
+              <option value="Medium" ${t.priority === 'Medium' ? 'selected' : ''}>Medium</option>
+              <option value="Low" ${t.priority === 'Low' ? 'selected' : ''}>Low</option>
             </select>
           </li>
         `).join('');
@@ -671,6 +840,7 @@ window.reclassifyTaskPriority = function(taskId, newPriority) {
   if (task) {
     task.priority = newPriority;
     saveTasksToStorage();
+    showToast(`Updated "${task.title}" to ${newPriority} priority`, 'info');
   }
 };
 
@@ -690,11 +860,18 @@ function renderConversationStream() {
     if (!isUser && msg.actions && Array.isArray(msg.actions) && msg.actions.length > 0) {
       actionButtonsHtml = `
         <div class="bubble-action-row">
-          ${msg.actions.map(act => `
-            <button class="bubble-action-btn" onclick="executeAssistantAction('${escapeHtml(act.type)}')">
-              ${escapeHtml(act.label)}
-            </button>
-          `).join('')}
+          ${msg.actions.map(act => {
+            let icon = '⚡';
+            if (act.type.includes('plan')) icon = '🗓️';
+            else if (act.type.includes('priorit')) icon = '📊';
+            else if (act.type.includes('task')) icon = '➕';
+            return `
+              <button class="bubble-action-btn" onclick="executeAssistantAction('${escapeHtml(act.type)}')">
+                <span>${icon}</span>
+                <span>${escapeHtml(act.label)}</span>
+              </button>
+            `;
+          }).join('')}
         </div>
       `;
     }
@@ -777,6 +954,7 @@ window.toggleTaskCompletion = function(taskId) {
     task.completed = !task.completed;
     task.completedAt = task.completed ? new Date().toISOString() : null;
     saveTasksToStorage();
+    showToast(task.completed ? `Completed "${task.title}"` : `Marked "${task.title}" as pending`, 'success');
   }
 };
 
@@ -786,6 +964,7 @@ window.confirmDeleteTask = function(taskId) {
   if (confirm(`Are you sure you want to delete "${task.title}"?`)) {
     state.tasks = state.tasks.filter(t => t.id !== taskId);
     saveTasksToStorage();
+    showToast(`Deleted "${task.title}"`, 'info');
   }
 };
 
@@ -845,7 +1024,7 @@ window.convertPlanItemToTask = function(dayNum, itemIndex) {
   });
 
   saveTasksToStorage();
-  alert(`Added "${item.activity}" to your task board.`);
+  showToast(`Added "${item.activity}" to your task board`, 'success');
 };
 
 function convertAllPlanItemsToTasks() {
@@ -873,7 +1052,7 @@ function convertAllPlanItemsToTasks() {
 
   saveTasksToStorage();
   switchMainView('viewTasks');
-  alert(`Added ${count} plan activities into your active tasks.`);
+  showToast(`Added ${count} plan activities into your active tasks!`, 'success');
 }
 
 // ============================================================================
@@ -1098,12 +1277,56 @@ async function checkSystemStatus() {
     const data = await res.json();
     updateAiStatusBadge(data.aiStatus, data.aiStatusLabel);
 
-    document.getElementById('diagCurrentStatus').textContent = data.aiStatusLabel || 'Demo Mode';
-    document.getElementById('diagAwsRegion').textContent = data.awsBedrock?.region || 'us-east-1';
-    document.getElementById('diagAwsModel').textContent = data.awsBedrock?.modelId || 'anthropic.claude-3-5-sonnet';
-    document.getElementById('diagServerUptime').textContent = `${data.uptime || 0} seconds`;
+    const diagCurrent = document.getElementById('diagCurrentStatus');
+    if (diagCurrent) diagCurrent.textContent = data.aiStatusLabel || 'Demo Mode';
+
+    const currentBadge = document.getElementById('settingsCurrentBadge');
+    if (currentBadge) {
+      currentBadge.className = `settings-status-badge status-${data.aiStatus || 'demo'}`;
+      currentBadge.textContent = data.aiStatus === 'connected' ? 'Bedrock Connected' : (data.aiStatus === 'offline' ? 'Offline' : 'Demo Mode');
+    }
+
+    const diagRegion = document.getElementById('diagAwsRegion');
+    if (diagRegion) diagRegion.textContent = data.awsBedrock?.region || 'us-east-1';
+
+    const diagModel = document.getElementById('diagAwsModel');
+    if (diagModel) diagModel.textContent = data.awsBedrock?.modelId || 'anthropic.claude-3-5-sonnet-20240620-v1:0';
+
+    const diagUptime = document.getElementById('diagServerUptime');
+    if (diagUptime) diagUptime.textContent = data.serverUptime || (data.uptime ? `${data.uptime}s` : '0s');
+
+    const diagLastReq = document.getElementById('diagLastRequest');
+    if (diagLastReq) {
+      if (data.awsBedrock?.lastSuccessfulRequest) {
+        diagLastReq.textContent = new Date(data.awsBedrock.lastSuccessfulRequest).toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        });
+      } else {
+        diagLastReq.textContent = 'None yet in this session';
+      }
+    }
+
+    const credsEl = document.getElementById('diagCredsStatus');
+    if (credsEl) {
+      if (data.awsBedrock?.configured) {
+        credsEl.textContent = 'Configured in .env';
+        credsEl.style.color = 'var(--success)';
+      } else {
+        credsEl.textContent = 'Not detected in .env (Demo Mode)';
+        credsEl.style.color = 'var(--text-muted)';
+      }
+    }
   } catch (err) {
     updateAiStatusBadge('offline', 'AI Unavailable');
+    const currentBadge = document.getElementById('settingsCurrentBadge');
+    if (currentBadge) {
+      currentBadge.className = 'settings-status-badge status-offline';
+      currentBadge.textContent = 'Offline';
+    }
+    const diagCurrent = document.getElementById('diagCurrentStatus');
+    if (diagCurrent) diagCurrent.textContent = 'AI Offline · Service Unreachable';
   }
 }
 
@@ -1123,41 +1346,94 @@ function updateAiStatusBadge(statusKey, label) {
 }
 
 async function testBedrockHandshake() {
-  const btn = document.getElementById('testBedrockBtn');
+  const btn = document.getElementById('testAwsConnectionBtn');
+  const retryBtn = document.getElementById('retryConnectionBtn');
   const box = document.getElementById('testFeedbackBox');
 
-  btn.disabled = true;
-  box.className = 'test-feedback-box';
-  box.textContent = 'Testing connection with Amazon Bedrock...';
-  box.classList.remove('hidden');
+  if (btn) btn.disabled = true;
+  if (retryBtn) retryBtn.disabled = true;
+
+  if (box) {
+    box.className = 'test-feedback-box';
+    box.textContent = 'Testing AWS Bedrock connection and invoking model...';
+    box.classList.remove('hidden');
+  }
 
   try {
     const res = await fetch('/api/test-bedrock', { method: 'POST' });
     const json = await res.json();
     const data = json.data;
 
+    // Refresh uptime if returned
+    if (data.serverUptime) {
+      const diagUptime = document.getElementById('diagServerUptime');
+      if (diagUptime) diagUptime.textContent = data.serverUptime;
+    }
+
     if (data.connected) {
-      box.className = 'test-feedback-box success';
-      box.innerHTML = `
-        <strong>Bedrock Connected</strong><br>
-        Region: ${data.region} · Latency: ${data.latencyMs}ms<br>
-        Response: "<em>${escapeHtml(data.reply.trim())}</em>"
-      `;
+      if (box) {
+        box.className = 'test-feedback-box success';
+        box.innerHTML = `
+          <strong>✓ Amazon Bedrock Connected</strong><br>
+          Region: <code>${escapeHtml(data.region)}</code> · Latency: ${data.latencyMs}ms<br>
+          Model: <code>${escapeHtml(data.modelId)}</code><br>
+          Verification reply: "<em>${escapeHtml(data.reply ? data.reply.trim() : 'Active')}</em>"
+        `;
+      }
       updateAiStatusBadge('connected', 'Amazon Bedrock Connected');
+      const diagCurrent = document.getElementById('diagCurrentStatus');
+      if (diagCurrent) diagCurrent.textContent = 'Amazon Bedrock Connected';
+
+      const currentBadge = document.getElementById('settingsCurrentBadge');
+      if (currentBadge) {
+        currentBadge.className = 'settings-status-badge status-connected';
+        currentBadge.textContent = 'Bedrock Connected';
+      }
+
+      const diagLastReq = document.getElementById('diagLastRequest');
+      if (diagLastReq && data.lastSuccessfulRequest) {
+        diagLastReq.textContent = new Date(data.lastSuccessfulRequest).toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        });
+      }
     } else {
-      box.className = 'test-feedback-box error';
-      box.innerHTML = `
-        <strong>${escapeHtml(data.statusLabel || 'Connection Test Failed')}</strong><br>
-        ${escapeHtml(data.error || data.message || 'Check IAM keys and Bedrock Model Access.')}
-      `;
-      updateAiStatusBadge('offline', 'AI Unavailable');
+      if (box) {
+        box.className = 'test-feedback-box error';
+        const troubleHtml = data.troubleshooting
+          ? `<div class="test-feedback-trouble"><strong>Guidance:</strong> ${escapeHtml(data.troubleshooting)}</div>`
+          : '';
+        box.innerHTML = `
+          <strong>✕ ${escapeHtml(data.statusLabel || 'Connection Test Failed')}</strong><br>
+          <span>${escapeHtml(data.error || data.message || 'Check IAM keys and Bedrock Model Access.')}</span>
+          ${troubleHtml}
+        `;
+      }
+      updateAiStatusBadge(data.configured ? 'offline' : 'demo', data.statusLabel || 'Demo Mode · Sample Responses');
+      const diagCurrent = document.getElementById('diagCurrentStatus');
+      if (diagCurrent) diagCurrent.textContent = data.statusLabel || 'Demo Mode · Sample Responses';
+
+      const currentBadge = document.getElementById('settingsCurrentBadge');
+      if (currentBadge) {
+        currentBadge.className = `settings-status-badge ${data.configured ? 'status-offline' : 'status-demo'}`;
+        currentBadge.textContent = data.configured ? 'Offline' : 'Demo Mode';
+      }
     }
   } catch (e) {
-    box.className = 'test-feedback-box error';
-    box.textContent = `Request error: ${e.message}`;
+    if (box) {
+      box.className = 'test-feedback-box error';
+      box.textContent = `Request error: ${e.message}`;
+    }
     updateAiStatusBadge('offline', 'AI Unavailable');
+    const currentBadge = document.getElementById('settingsCurrentBadge');
+    if (currentBadge) {
+      currentBadge.className = 'settings-status-badge status-offline';
+      currentBadge.textContent = 'Offline';
+    }
   } finally {
-    btn.disabled = false;
+    if (btn) btn.disabled = false;
+    if (retryBtn) retryBtn.disabled = false;
   }
 }
 
@@ -1204,15 +1480,22 @@ function initializeEventListeners() {
 
   composerForm?.addEventListener('submit', (e) => {
     e.preventDefault();
-    handleChatSubmit(composerInput.value);
+    if (composerInput) handleChatSubmit(composerInput.value);
   });
 
-  composerInput?.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleChatSubmit(composerInput.value);
-    }
-  });
+  if (composerInput) {
+    composerInput.addEventListener('input', () => {
+      composerInput.style.height = 'auto';
+      composerInput.style.height = Math.min(composerInput.scrollHeight, 120) + 'px';
+    });
+
+    composerInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleChatSubmit(composerInput.value);
+      }
+    });
+  }
 
   // Cancel Request Button
   document.getElementById('cancelRequestBtn')?.addEventListener('click', cancelActiveRequest);
@@ -1250,13 +1533,16 @@ function initializeEventListeners() {
   document.getElementById('openAddTaskBtn')?.addEventListener('click', openAddTaskModal);
 
   document.getElementById('clearCompletedTasksBtn')?.addEventListener('click', () => {
+    const count = state.tasks.filter(t => t.completed).length;
     state.tasks = state.tasks.filter(t => !t.completed);
     saveTasksToStorage();
+    showToast(count > 0 ? `Cleared ${count} completed tasks` : 'No completed tasks to clear', 'info');
   });
 
   document.getElementById('loadSampleTasksBtn')?.addEventListener('click', () => {
     state.tasks = JSON.parse(JSON.stringify(INITIAL_SHARED_TASKS));
     saveTasksToStorage();
+    showToast('Reset sample task list', 'info');
   });
 
   // Task Form Submit (Add or Edit)
@@ -1301,6 +1587,7 @@ function initializeEventListeners() {
 
     saveTasksToStorage();
     closeTaskModal();
+    showToast(editId ? `Updated "${title}"` : `Added "${title}" to your tasks!`, 'success');
   });
 
   document.getElementById('closeTaskModalBtn')?.addEventListener('click', closeTaskModal);
@@ -1316,7 +1603,7 @@ function initializeEventListeners() {
   // Schedule conflict buttons
   document.getElementById('conflictExtendBtn')?.addEventListener('click', () => {
     document.getElementById('scheduleConflictBanner').classList.add('hidden');
-    alert('Extended available time to 5 hours. Your schedule is now balanced.');
+    showToast('Extended daily time allowance. Schedule conflict resolved!', 'success');
   });
 
   document.getElementById('conflictDismissBtn')?.addEventListener('click', () => {
@@ -1358,6 +1645,37 @@ function initializeEventListeners() {
     }
   });
 
+  // Clear Chat Button
+  document.getElementById('clearChatBtn')?.addEventListener('click', () => {
+    if (confirm('Start a new conversation? Your task list will be preserved.')) {
+      state.conversationHistory = [
+        {
+          sender: 'assistant',
+          text: "Hello! I'm LifePilot. What would you like to accomplish today? Ask me to plan your day, prioritize tasks, or build a study roadmap.",
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          actions: [
+            { type: 'create_plan', label: 'Plan my day' },
+            { type: 'view_priorities', label: 'Prioritize my tasks' }
+          ]
+        }
+      ];
+      saveHistoryToStorage();
+      showToast('Started fresh conversation', 'info');
+    }
+  });
+
+  // Global Keyboard Shortcuts
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      document.getElementById('taskModal')?.classList.add('hidden');
+      document.getElementById('planModal')?.classList.add('hidden');
+      document.getElementById('settingsModal')?.classList.add('hidden');
+    } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      document.getElementById('composerInput')?.focus();
+    }
+  });
+
   // Settings Modal
   const settingsModal = document.getElementById('settingsModal');
   const settingsBtn = document.getElementById('settingsBtn');
@@ -1373,7 +1691,8 @@ function initializeEventListeners() {
   aiStatusPill?.addEventListener('click', openSettings);
   document.getElementById('closeSettingsModalBtn')?.addEventListener('click', closeSettings);
   document.getElementById('closeSettingsBottomBtn')?.addEventListener('click', closeSettings);
-  document.getElementById('testBedrockBtn')?.addEventListener('click', testBedrockHandshake);
+  document.getElementById('testAwsConnectionBtn')?.addEventListener('click', testBedrockHandshake);
+  document.getElementById('retryConnectionBtn')?.addEventListener('click', testBedrockHandshake);
 }
 
 // ============================================================================

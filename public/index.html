@@ -82,15 +82,22 @@
             <p class="assistant-tagline">Ready to help you plan your day.</p>
           </div>
         </div>
+        <div class="assistant-header-actions">
+          <button class="header-icon-btn btn-sm" id="clearChatBtn" title="Clear conversation &amp; start new chat" aria-label="Clear chat">
+            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+          </button>
+        </div>
       </div>
 
       <!-- Compact Suggested Prompts -->
       <div class="suggested-prompts-row" id="suggestedPromptsRow">
-        <button class="prompt-pill" data-prompt="Help me plan my day.">Plan my day</button>
-        <button class="prompt-pill" data-prompt="What should I prioritize today?">Prioritize my tasks</button>
-        <button class="prompt-pill" data-prompt="I have five days to prepare for my Java examination. I can study two hours daily.">5-day Java study plan</button>
-        <button class="prompt-pill" data-prompt="Add a task to prepare deployment slides by tomorrow.">Add a task</button>
-        <button class="prompt-pill" data-prompt="Summarize my pending tasks.">Summarize tasks</button>
+        <button class="prompt-pill" data-prompt="Help me plan my day.">⚡ Plan my day</button>
+        <button class="prompt-pill" data-prompt="What should I prioritize today?">🎯 Prioritize tasks</button>
+        <button class="prompt-pill" data-prompt="I have five days to prepare for my Java examination. I can study two hours daily.">📚 5-day Java study plan</button>
+        <button class="prompt-pill" data-prompt="Add a task to prepare deployment slides by tomorrow.">➕ Add a task</button>
+        <button class="prompt-pill" data-prompt="Summarize my pending tasks.">📊 Summarize tasks</button>
       </div>
 
       <!-- Real Conversation History Stream -->
@@ -136,10 +143,17 @@
           </div>
 
           <!-- Submit Button -->
-          <button type="submit" class="composer-send-btn" id="sendBtn" title="Send message">
+          <button type="submit" class="composer-send-btn" id="sendBtn" title="Send message (Enter)">
+            <svg class="send-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
             <span>Send</span>
           </button>
         </form>
+        <div class="composer-hint-row">
+          <span>Press <kbd>Enter ↵</kbd> to send · <kbd>Shift + Enter</kbd> for new line</span>
+        </div>
       </div>
 
     </aside>
@@ -486,64 +500,151 @@
   </div>
 
   <!-- ====================================================================
-       MODAL: Settings & AWS Bedrock Diagnostics
+       MODAL: Settings & AWS Connection Diagnostics (3-Section Professional Layout)
        ==================================================================== -->
   <div class="modal-backdrop hidden" id="settingsModal">
     <div class="modal-window modal-wide">
       <div class="modal-top">
-        <h3>AI Integration &amp; System Status</h3>
-        <button class="modal-close" id="closeSettingsModalBtn">&times;</button>
+        <div>
+          <h3>Settings &amp; AWS Connection</h3>
+          <p class="modal-subtitle">Configure and verify your Amazon Bedrock integration.</p>
+        </div>
+        <button class="modal-close" id="closeSettingsModalBtn" title="Close settings">&times;</button>
       </div>
-      <div class="modal-body">
+
+      <div class="modal-body settings-modal-body">
         
-        <div class="diagnostics-summary">
-          <div class="summary-line">
-            <span class="line-label">Current Status:</span>
-            <span class="line-value" id="diagCurrentStatus">Checking...</span>
+        <!-- SECTION 1: Connection Status -->
+        <section class="settings-group">
+          <div class="settings-group-header">
+            <h4 class="settings-group-title">Connection Status</h4>
+            <span class="settings-status-badge status-demo" id="settingsCurrentBadge">Demo Mode</span>
           </div>
-          <div class="summary-line">
-            <span class="line-label">AWS Region:</span>
-            <span class="line-value" id="diagAwsRegion">us-east-1</span>
-          </div>
-          <div class="summary-line">
-            <span class="line-label">Target Model:</span>
-            <span class="line-value" id="diagAwsModel">anthropic.claude-3-5-sonnet-20240620-v1:0</span>
-          </div>
-          <div class="summary-line">
-            <span class="line-label">Server Uptime:</span>
-            <span class="line-value" id="diagServerUptime">0s</span>
-          </div>
-        </div>
 
-        <div class="diag-action-block">
-          <button class="btn btn-primary" id="testBedrockBtn">
-            Test Amazon Bedrock Handshake
-          </button>
-          <div id="testFeedbackBox" class="test-feedback-box hidden"></div>
-        </div>
+          <div class="settings-card">
+            <div class="settings-grid-2">
+              <div class="summary-line">
+                <span class="line-label">Current Mode:</span>
+                <span class="line-value" id="diagCurrentStatus">Demo Mode · Sample Responses</span>
+              </div>
+              <div class="summary-line">
+                <span class="line-label">AWS Region:</span>
+                <span class="line-value" id="diagAwsRegion">us-east-1</span>
+              </div>
+              <div class="summary-line">
+                <span class="line-label">Target Model:</span>
+                <span class="line-value" id="diagAwsModel">anthropic.claude-3-5-sonnet-20240620-v1:0</span>
+              </div>
+              <div class="summary-line">
+                <span class="line-label">Server Uptime:</span>
+                <span class="line-value" id="diagServerUptime">0s</span>
+              </div>
+              <div class="summary-line" style="grid-column: 1 / -1;">
+                <span class="line-label">Last Successful Request:</span>
+                <span class="line-value" id="diagLastRequest">None yet in this session</span>
+              </div>
+            </div>
 
-        <div class="instructions-block">
-          <h4>AWS Builder Mini Challenge Setup</h4>
-          <p>LifePilot communicates with Amazon Bedrock via server-side credentials configured in <code>.env</code>.</p>
-          <ol>
-            <li>Verify <code>bedrock:InvokeModel</code> permissions in IAM.</li>
-            <li>Enable model access in the AWS Bedrock Console.</li>
-            <li>Configure credentials in <code>.env</code>:
-              <pre><code>AWS_REGION=us-east-1
-AWS_ACCESS_KEY_ID=AKIA...
-AWS_SECRET_ACCESS_KEY=...
+            <!-- Primary Test Action -->
+            <div class="diag-action-block">
+              <button class="btn btn-primary" id="testAwsConnectionBtn">
+                Test AWS Connection
+              </button>
+              <div id="testFeedbackBox" class="test-feedback-box hidden"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- SECTION 2: AWS Configuration -->
+        <section class="settings-group">
+          <div class="settings-group-header">
+            <h4 class="settings-group-title">AWS Configuration</h4>
+          </div>
+
+          <div class="settings-card">
+            <div class="config-status-row">
+              <div class="config-status-item">
+                <span class="config-label">Credentials Source</span>
+                <span class="config-val" id="diagCredsStatus">Local .env file</span>
+              </div>
+              <div class="config-status-item">
+                <span class="config-label">Required Permissions</span>
+                <span class="config-val code-val">bedrock:InvokeModel</span>
+              </div>
+              <div class="config-status-item">
+                <span class="config-label">Model Access</span>
+                <span class="config-val">Must be enabled in Bedrock Console</span>
+              </div>
+            </div>
+
+            <!-- Collapsible Setup Guide (Keeps window uncluttered) -->
+            <details class="setup-collapsible" id="setupCollapsible">
+              <summary class="setup-summary">
+                <span>View Environment &amp; Credential Setup Guide</span>
+              </summary>
+              <div class="setup-details-content">
+                <p>LifePilot communicates securely with Amazon Bedrock via server-side environment variables. Credentials are never exposed to browser client code.</p>
+                <div class="code-block-wrapper">
+                  <div class="code-header">Example .env configuration</div>
+                  <pre><code>AWS_REGION=us-east-1
+AWS_ACCESS_KEY_ID=your_access_key
+AWS_SECRET_ACCESS_KEY=your_secret_key
+# Optional for IAM roles / temporary session tokens:
+# AWS_SESSION_TOKEN=your_session_token
 BEDROCK_MODEL_ID=anthropic.claude-3-5-sonnet-20240620-v1:0</code></pre>
-            </li>
-            <li>When credentials are not present, LifePilot transparently runs in <strong>Demo Mode · Sample Responses</strong> so reviewers can test every feature immediately.</li>
-          </ol>
-        </div>
+                </div>
+                <ul class="setup-notes-list">
+                  <li>Keep real keys only in your local <code>.env</code> file (which is excluded from Git via <code>.gitignore</code>).</li>
+                  <li>Use <code>.env.example</code> with placeholder values for repository sharing.</li>
+                  <li>Temporary credentials via AWS Academy, Learner Lab, or IAM Roles with <code>AWS_SESSION_TOKEN</code> are fully supported.</li>
+                </ul>
+              </div>
+            </details>
+          </div>
+        </section>
+
+        <!-- SECTION 3: Troubleshooting -->
+        <section class="settings-group">
+          <div class="settings-group-header">
+            <h4 class="settings-group-title">Troubleshooting Common Issues</h4>
+          </div>
+
+          <div class="troubleshoot-grid">
+            <div class="troubleshoot-item">
+              <div class="troubleshoot-title">1. Missing Credentials</div>
+              <p class="troubleshoot-desc">If keys are not in <code>.env</code>, LifePilot automatically runs in Demo Mode with intelligent local planning so you can test all workflows.</p>
+            </div>
+            <div class="troubleshoot-item">
+              <div class="troubleshoot-title">2. Insufficient Permissions</div>
+              <p class="troubleshoot-desc">If you receive <code>AccessDeniedException</code>, attach <code>bedrock:InvokeModel</code> and <code>bedrock:InvokeModelWithResponseStream</code> to your IAM policy.</p>
+            </div>
+            <div class="troubleshoot-item">
+              <div class="troubleshoot-title">3. Model Access Not Granted</div>
+              <p class="troubleshoot-desc">In the AWS Console for your region (e.g. <code>us-east-1</code>), open Amazon Bedrock &gt; <em>Model access</em> and request access for Claude 3.5 Sonnet or Nova.</p>
+            </div>
+            <div class="troubleshoot-item">
+              <div class="troubleshoot-title">4. Network / Endpoint Timeouts</div>
+              <p class="troubleshoot-desc">Check your network connection and verify that your configured <code>AWS_REGION</code> is reachable without proxy blocks.</p>
+            </div>
+          </div>
+
+          <div class="troubleshoot-action-row">
+            <button class="btn btn-secondary btn-sm" id="retryConnectionBtn">
+              Retry Connection
+            </button>
+          </div>
+        </section>
 
       </div>
+
       <div class="modal-bottom">
         <button type="button" class="btn btn-secondary" id="closeSettingsBottomBtn">Close</button>
       </div>
     </div>
   </div>
+
+  <!-- Floating Toast Notifications Container -->
+  <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 
   <script src="app.js"></script>
 </body>

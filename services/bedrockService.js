@@ -23,6 +23,40 @@ const MODEL_ID = process.env.BEDROCK_MODEL_ID || 'anthropic.claude-3-5-sonnet-20
 
 let bedrockClient = null;
 let lastVerifiedSuccess = false;
+let lastSuccessfulRequestTime = null;
+
+function formatUptime(seconds) {
+  if (typeof seconds !== 'number' || seconds < 0) return '0s';
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  if (h > 0) return `${h}h ${m}m ${s}s`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+
+function getTroubleshootingGuidance(err) {
+  if (!err) return '';
+  const msg = err.message || '';
+  const code = err.name || '';
+
+  if (code === 'AccessDeniedException' || msg.includes('AccessDenied')) {
+    return 'IAM permission denied. Ensure your AWS IAM User/Role has policies allowing "bedrock:InvokeModel" and "bedrock:InvokeModelWithResponseStream".';
+  }
+  if (code === 'ResourceNotFoundException' || msg.includes('model') && msg.includes('not found')) {
+    return `Model "${MODEL_ID}" was not found or is not available in ${AWS_REGION}. Go to AWS Bedrock Console > Model Access and request access.`;
+  }
+  if (code === 'UnrecognizedClientException' || msg.includes('security token') || msg.includes('credentials')) {
+    return 'Invalid AWS credentials. Check that AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY in .env are correct and active.';
+  }
+  if (code === 'ValidationException') {
+    return 'Input validation failed. Verify that your BEDROCK_MODEL_ID supports Converse API in this region.';
+  }
+  if (msg.includes('network') || msg.includes('ENOTFOUND') || msg.includes('ETIMEDOUT')) {
+    return 'Network connection failure reaching AWS endpoints. Check your internet connection or proxy settings.';
+  }
+  return `Verify that model access is granted for "${MODEL_ID}" in the ${AWS_REGION} Bedrock Console and IAM keys are valid.`;
+}
 
 function getBedrockClient() {
   if (!bedrockClient) {
@@ -439,6 +473,7 @@ async function processAssistantRequest(userMessage, currentTasks = [], conversat
     const response = await client.send(command);
     const latencyMs = Date.now() - startTime;
     lastVerifiedSuccess = true;
+    lastSuccessfulRequestTime = new Date().toISOString();
 
     const outputMessage = response.output?.message?.content?.[0]?.text || '';
     const actionable = extractActionableItems(outputMessage);
@@ -476,51 +511,73 @@ async function processAssistantRequest(userMessage, currentTasks = [], conversat
 }
 
 /**
- * Diagnostics Test Handshake
+ * Diagnostics Test: Attempt an actual Amazon Bedrock model invocation
  */
 async function testBedrockConnection() {
   const startTime = Date.now();
+  const uptimeStr = formatUptime(process.uptime());
+
   if (!isConfigured()) {
     return {
       connected: false,
       configured: false,
       statusLabel: 'Demo Mode · Sample Responses',
-      message: 'AWS credentials not configured in .env. Running in Demo Mode.',
+      message: 'AWS credentials are not configured in .env. Running in local demo mode.',
       region: AWS_REGION,
-      modelId: MODEL_ID
+      modelId: MODEL_ID,
+      serverUptime: uptimeStr,
+      lastSuccessfulRequest: lastSuccessfulRequestTime,
+      troubleshooting: 'To connect to Amazon Bedrock, add your AWS credentials to .env and request Model Access in the AWS Bedrock Console.'
     };
   }
 
   try {
     const client = getBedrockClient();
+    // Verify by actually invoking the configured Bedrock foundation model
     const command = new ConverseCommand({
       modelId: MODEL_ID,
-      messages: [{ role: 'user', content: [{ text: 'Health check. Respond with "Active".' }] }],
-      inferenceConfig: { maxTokens: 20, temperature: 0.1 }
+      messages: [
+        {
+          role: 'user',
+          content: [{ text: 'Respond strictly with "Active".' }]
+        }
+      ],
+      inferenceConfig: { maxTokens: 25, temperature: 0.1 }
     });
 
     const res = await client.send(command);
+    const latencyMs = Date.now() - startTime;
     lastVerifiedSuccess = true;
+    lastSuccessfulRequestTime = new Date().toISOString();
+
+    const reply = res.output?.message?.content?.[0]?.text || 'Active';
+
     return {
       connected: true,
       configured: true,
       statusLabel: 'Amazon Bedrock Connected',
-      reply: res.output?.message?.content?.[0]?.text || '',
+      reply,
       region: AWS_REGION,
       modelId: MODEL_ID,
-      latencyMs: Date.now() - startTime
+      latencyMs,
+      serverUptime: uptimeStr,
+      lastSuccessfulRequest: lastSuccessfulRequestTime
     };
   } catch (err) {
     lastVerifiedSuccess = false;
+    const latencyMs = Date.now() - startTime;
     return {
       connected: false,
       configured: true,
-      statusLabel: 'AI Offline · Retry',
+      statusLabel: 'AI Unavailable',
       error: err.message,
       code: err.name,
       region: AWS_REGION,
       modelId: MODEL_ID,
-      latencyMs: Date.now() - startTime
+      latencyMs,
+      serverUptime: uptimeStr,
+      lastSuccessfulRequest: lastSuccessfulRequestTime,
+      troubleshooting: getTroubleshootingGuidance(err)
     };
   }
 }
@@ -530,6 +587,8 @@ module.exports = {
   testBedrockConnection,
   isConfigured,
   hasVerifiedConnection,
+  getLastSuccessfulRequestTime: () => lastSuccessfulRequestTime,
+  formatUptime,
   AWS_REGION,
   MODEL_ID
 };

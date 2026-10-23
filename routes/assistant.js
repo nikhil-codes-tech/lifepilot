@@ -181,9 +181,12 @@ router.get('/status', (req, res) => {
       configured: isConfig,
       verified: isVerified,
       region: bedrockService.AWS_REGION,
-      modelId: bedrockService.MODEL_ID
+      modelId: bedrockService.MODEL_ID,
+      lastSuccessfulRequest: bedrockService.getLastSuccessfulRequestTime(),
+      requiredPermissions: ['bedrock:InvokeModel', 'bedrock:InvokeModelWithResponseStream']
     },
-    uptime: Math.floor(process.uptime())
+    uptime: Math.floor(process.uptime()),
+    serverUptime: bedrockService.formatUptime(process.uptime())
   });
 });
 
